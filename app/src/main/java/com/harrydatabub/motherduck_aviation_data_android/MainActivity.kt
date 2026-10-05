@@ -1,0 +1,25 @@
+package com.harrydatabub.motherduck_aviation_data_android
+
+import android.net.http.HttpResponseCache
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import com.harrydatabub.motherduck_aviation_data_android.ui.AppRoot
+import com.harrydatabub.motherduck_aviation_data_android.ui.AppViewModel
+import java.io.File
+
+class MainActivity : ComponentActivity() {
+    private val vm: AppViewModel by viewModels()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Disk cache for map tiles (the API client opts out; it keeps its own copies).
+        if (HttpResponseCache.getInstalled() == null) {
+            runCatching { HttpResponseCache.install(File(cacheDir, "http"), 50L * 1024 * 1024) }
+        }
+        enableEdgeToEdge()
+        setContent { AppRoot(vm) }
+    }
+}
