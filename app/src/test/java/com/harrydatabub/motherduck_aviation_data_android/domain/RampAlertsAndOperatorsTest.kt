@@ -55,7 +55,10 @@ class RampAlertsAndOperatorsTest {
         assertEquals(AlertLevel.CAUTION, alerts(metar(cat = "IFR")).single().level)
         assertEquals(AlertKind.FREEZING, alerts(metar(temp = -2.0)).single().kind)
         assertEquals(AlertLevel.WARNING, alerts(metar(wx = "FZFG", temp = -1.0)).first().level)
-        assertEquals(AlertKind.HEAT, alerts(metar(temp = 37.0)).single().kind)
+        // Heat goes by heat index: 35 °C with a 25 °C dew point feels like 43 °C.
+        assertEquals(AlertLevel.WARNING, alerts(metar(temp = 35.0).copy(dewpointC = 25.0)).single().level)
+        assertEquals(AlertKind.HEAT, alerts(metar(temp = 32.0).copy(dewpointC = 18.0)).single().kind)
+        assertEquals(AlertKind.COLD, alerts(metar(wind = 20, temp = -20.0).copy(dewpointC = -25.0)).first { it.kind != AlertKind.FREEZING }.kind)
         assertEquals(AlertKind.STALE, alerts(metar(ageMin = 180)).single().kind)
         assertEquals(AlertKind.PRECIPITATION, alerts(metar(wx = "-RA")).single().kind)
     }

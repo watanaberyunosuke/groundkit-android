@@ -15,6 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -62,6 +64,7 @@ fun NowScreen(
     onSeeDepartures: () -> Unit,
     onSeeWeather: () -> Unit,
     onSeeNotams: () -> Unit,
+    onOpenMap: () -> Unit,
 ) {
     val snap = state.snapshot ?: return
     val traffic = state.traffic
@@ -89,6 +92,7 @@ fun NowScreen(
             items(state.alerts) { AlertCard(it) }
         }
         item { WeatherGlance(snap, now, onSeeWeather) }
+        item { MapLink(state, onOpenMap) }
         item {
             NextFlights(
                 "Next arrivals", filterNote, nextArrivals, snap, now, state.live.error, onFlight, onSeeArrivals,
@@ -197,6 +201,20 @@ private fun NextFlights(
             }
         }
         SeeAll(seeAllLabel, onSeeAll)
+    }
+}
+
+@Composable
+private fun MapLink(state: UiState, onOpenMap: () -> Unit) {
+    val count = state.traffic?.placed?.size
+    OutlinedButton(onClick = onOpenMap, modifier = Modifier.fillMaxWidth().height(60.dp)) {
+        Icon(Icons.Filled.Map, contentDescription = null)
+        Spacer(Modifier.width(10.dp))
+        Text(
+            "Airspace map" + (count?.let { " · $it aircraft" } ?: ""),
+            style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f),
+        )
+        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
     }
 }
 

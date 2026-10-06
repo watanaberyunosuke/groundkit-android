@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.FlightLand
 import androidx.compose.material.icons.filled.FlightTakeoff
+import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
@@ -61,18 +62,21 @@ import com.harrydatabub.motherduck_aviation_data_android.ui.screens.FlightDetail
 import com.harrydatabub.motherduck_aviation_data_android.ui.screens.FlightsScreen
 import com.harrydatabub.motherduck_aviation_data_android.ui.screens.NowScreen
 import com.harrydatabub.motherduck_aviation_data_android.ui.screens.SettingsSheet
+import com.harrydatabub.motherduck_aviation_data_android.ui.screens.ShiftScreen
 import com.harrydatabub.motherduck_aviation_data_android.ui.theme.RampTheme
 
-enum class Screen(val label: String, val icon: ImageVector) {
+/** Bottom-bar destinations, plus the map, which opens from Now and from a flight. */
+enum class Screen(val label: String, val icon: ImageVector, val inBar: Boolean = true) {
     NOW("Now", Icons.Filled.Dashboard),
     ARRIVALS("Arrivals", Icons.Filled.FlightLand),
     DEPARTURES("Departures", Icons.Filled.FlightTakeoff),
-    MAP("Map", Icons.Filled.Map),
     BRIEFING("Briefing", Icons.Filled.Cloud),
+    SHIFT("Shift", Icons.Filled.HealthAndSafety),
+    MAP("Map", Icons.Filled.Map, inBar = false),
 }
 
 @Composable
-fun AppRoot(vm: AppViewModel) {
+fun AppRoot(vm: AppViewModel, shiftVm: ShiftViewModel) {
     val state by vm.state.collectAsStateWithLifecycle()
     RampTheme(state.settings.theme) {
         // Poll the API only while the app is visible.
@@ -85,13 +89,15 @@ fun AppRoot(vm: AppViewModel) {
             view.keepScreenOn = state.settings.keepScreenOn
             onDispose { view.keepScreenOn = false }
         }
-        Content(state, vm)
+        Content(state, vm, shiftVm)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Content(state: UiState, vm: AppViewModel) {
+private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel) {
+    val records by shiftVm.records.collectAsStateWithLifecycle()
+    val health by shiftVm.healthState.collectAsStateWithLifecycle()
     var screen by rememberSaveable { mutableStateOf(Screen.NOW) }
     var briefingTab by rememberSaveable { mutableStateOf(BriefingTab.WEATHER) }
     var mapSelection by rememberSaveable { mutableStateOf<String?>(null) }
@@ -139,7 +145,7 @@ private fun Content(state: UiState, vm: AppViewModel) {
         },
         bottomBar = {
             NavigationBar {
-                Screen.entries.forEach { s ->
+                Screen.entries.filter { it.inBar }.forEach { s ->
                     NavigationBarItem(
                         selected = screen == s,
                         onClick = { screen = s },
@@ -164,6 +170,7 @@ private fun Content(state: UiState, vm: AppViewModel) {
                             onSeeDepartures = { screen = Screen.DEPARTURES },
                             onSeeWeather = { briefingTab = BriefingTab.WEATHER; screen = Screen.BRIEFING },
                             onSeeNotams = { briefingTab = BriefingTab.NOTAMS; screen = Screen.BRIEFING },
+                            onOpenMap = { screen = Screen.MAP },
                         )
                         Screen.ARRIVALS, Screen.DEPARTURES -> FlightsScreen(
                             if (screen == Screen.ARRIVALS) Dir.INBOUND else Dir.OUTBOUND,
@@ -178,6 +185,7 @@ private fun Content(state: UiState, vm: AppViewModel) {
                             state, now, briefingTab, onTab = { briefingTab = it },
                             onSelectAirport = vm::selectAirport,
                         )
+                        Screen.SHIFT -> ShiftScreen(shiftVm, records, health, snap, now)
                     }
                 }
             }
