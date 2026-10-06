@@ -64,6 +64,25 @@ class FlightCodes(private val airlines: Map<String, Airline>) {
         callsign?.takeIf { it.length >= 3 }?.let { airlines[it.substring(0, 3)]?.name }
 }
 
+/**
+ * Direction of each airborne aircraft at the last fix, by transponder address. An arrival
+ * stays inbound until it lands, though downwind legs and holds point it away from the
+ * airport, and a departure stays outbound. Port of the Dive's `lastDir`; the API cannot
+ * do this, as it keeps nothing between calls.
+ */
+class DirectionMemory {
+    private val dirs = HashMap<String, Placement>()
+
+    fun clear() = dirs.clear()
+
+    operator fun get(icao24: String): Placement? = dirs[icao24]
+
+    fun remember(icao24: String, placement: Placement) {
+        if (placement == Placement.INBOUND || placement == Placement.OUTBOUND) dirs[icao24] = placement
+        else dirs.remove(icao24)
+    }
+}
+
 /** A recognised flight on the live feed, direction settled (ground aircraft get one from usual times). */
 data class BoardLive(
     val callsign: String,
@@ -126,6 +145,14 @@ data class BoardRow(
     val usual: String?,
 )
 
+private fun placementOf(dir: String?): Placement? = when (dir) {
+    "inbound" -> Placement.INBOUND
+    "outbound" -> Placement.OUTBOUND
+    "ground" -> Placement.GROUND
+    "other" -> Placement.OTHER
+    else -> null
+}
+
 object LiveTraffic {
     const val PAST_HOURS = 3
     const val NEXT_HOURS = 6
@@ -136,8 +163,11 @@ object LiveTraffic {
     /**
      * Port of the Dive's `placed`: direction, ETA and delay status for each live aircraft.
      *
-     * Direction comes from the callsign's last 30 days at the airport; beyond 30 NM the
-     * aircraft's track must agree (a reused callsign flying away is not inbound). ETA is the
+     * Direction comes from the API (`dir`, for this fix) or, without it, the same rules here:
+     * the callsign's last 30 days at the airport; beyond 30 NM the aircraft's track must
+     * agree (a reused callsign flying away is not inbound); nearer in, a clear descent or
+     * climb decides for callsigns flown both ways. An airborne aircraft then keeps its
+     * direction from earlier fixes ([DirectionMemory]) until it lands. ETA is the
      * time at current ground speed to the 50 NM ring plus the airport's median time inside
      * it, pro rata when already inside. Outbound flights get an estimated take-off the same
      * way, backwards.
@@ -152,19 +182,39 @@ object LiveTraffic {
         zone: ZoneId,
         now: Long,
         codes: FlightCodes,
+        directions: DirectionMemory = DirectionMemory(),
     ): List<PlacedAircraft> = aircraft.map { a ->
         val km = distKm(a.lat, a.lon, airportLat, airportLon)
         val h = a.callsign?.let { history[it] }
         // 0 = heading straight at the airport, 180 = straight away.
         val off = abs(((a.trackDeg ?: 0.0) - bearingDeg(a.lat, a.lon, airportLat, airportLon) + 540) % 360 - 180)
         val near = km < 30 * KM_PER_NM
-        val placement = when {
+        // Near the airport a clear descent or climb says more than the heading, which turns
+        // away from the airport on downwind and in holds.
+        val descending = near && a.vrateFpm != null && a.vrateFpm <= -300
+        val climbing = near && a.vrateFpm != null && a.vrateFpm >= 300
+        val thisFix = placementOf(a.dir) ?: when {
             a.onGround -> if (km < 8) Placement.GROUND else Placement.OTHER
-            h?.inbound != null && h.outbound != null -> if (off < 90) Placement.INBOUND else Placement.OUTBOUND
+            h?.inbound != null && h.outbound != null -> when {
+                descending -> Placement.INBOUND
+                climbing -> Placement.OUTBOUND
+                off < 90 -> Placement.INBOUND
+                else -> Placement.OUTBOUND
+            }
             h?.inbound != null && (near || off < 110) -> Placement.INBOUND
             h?.outbound != null && (near || off > 70) -> Placement.OUTBOUND
             else -> Placement.OTHER
         }
+        val prev = directions[a.icao24]
+        val prevKnown = prev == Placement.INBOUND && h?.inbound != null || prev == Placement.OUTBOUND && h?.outbound != null
+        val placement = when {
+            a.onGround || !prevKnown -> thisFix
+            // An arrival first seen level on downwind, or a departure coming back. A climb
+            // never overrides inbound, so a go-around stays an arrival.
+            prev == Placement.OUTBOUND && descending && h?.inbound != null -> Placement.INBOUND
+            else -> prev!!
+        }
+        directions.remember(a.icao24, placement)
         val speed = (a.speedKt ?: 0).toDouble()
         val seen = when (placement) {
             Placement.INBOUND -> h?.inbound

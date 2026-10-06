@@ -16,6 +16,7 @@ import com.harrydatabub.motherduck_aviation_data_android.domain.AirportSnapshot
 import com.harrydatabub.motherduck_aviation_data_android.domain.BoardLive
 import com.harrydatabub.motherduck_aviation_data_android.domain.BoardRow
 import com.harrydatabub.motherduck_aviation_data_android.domain.Dir
+import com.harrydatabub.motherduck_aviation_data_android.domain.DirectionMemory
 import com.harrydatabub.motherduck_aviation_data_android.domain.FeedMemory
 import com.harrydatabub.motherduck_aviation_data_android.domain.LiveTraffic
 import com.harrydatabub.motherduck_aviation_data_android.domain.Operators
@@ -93,6 +94,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var snapshot: AirportSnapshot? = null
     private var feed: LiveFeed? = null
     private val memory = FeedMemory()
+    private val directions = DirectionMemory()
 
     private var foregroundJob: Job? = null
     private var refreshJob: Job? = null
@@ -138,6 +140,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             lock.withLock {
                 memory.clear()
+                directions.clear()
                 feed = null
             }
             settingsStore.update { it.copy(airport = iata) }
@@ -257,7 +260,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun place(snap: AirportSnapshot, f: LiveFeed): List<PlacedAircraft> = LiveTraffic.place(
         f.aircraft, snap.airport.lat, snap.airport.lon, snap.history,
-        snap.terminalArrMin, snap.terminalDepMin, snap.zone, f.at, snap.codes,
+        snap.terminalArrMin, snap.terminalDepMin, snap.zone, f.at, snap.codes, directions,
     )
 
     /** The selected airport: the saved IATA (or ICAO) code, else HKG as in the Dive, else the first. */

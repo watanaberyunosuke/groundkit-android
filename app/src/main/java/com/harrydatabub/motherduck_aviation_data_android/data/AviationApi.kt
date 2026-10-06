@@ -96,6 +96,7 @@ class AviationApi(private val baseUrl: String, cacheRoot: File) {
                             speedKt = a.optNumber("speed_kt")?.toInt(),
                             trackDeg = a.optNumber("track_deg")?.toDouble(),
                             vrateFpm = a.optNumber("vrate_fpm")?.toInt(),
+                            dir = a.optStringOrNull("dir"),
                         ),
                     )
                 }
