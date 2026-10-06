@@ -254,6 +254,7 @@ fun AlertCard(alert: RampAlert, modifier: Modifier = Modifier) {
         AlertKind.VISIBILITY -> Icons.Filled.VisibilityOff
         AlertKind.FREEZING -> Icons.Filled.AcUnit
         AlertKind.HEAT -> Icons.Filled.WbSunny
+        AlertKind.COLD -> Icons.Filled.AcUnit
         AlertKind.PRECIPITATION -> Icons.Filled.Umbrella
         AlertKind.DUST -> Icons.Filled.Grain
         AlertKind.STALE -> Icons.Filled.Schedule

@@ -59,6 +59,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.kotlinx.coroutines.android)
+    // Steps, distance, active energy, heart rate and water for the Shift tab.
+    implementation(libs.androidx.health.connect)
     // The API's Parquet exports are ZSTD-compressed. The AAR carries the Android native
     // libraries; unit tests on the JVM use the plain jar, which carries desktop ones.
     implementation(libs.zstd.jni) { artifact { type = "aar" } }

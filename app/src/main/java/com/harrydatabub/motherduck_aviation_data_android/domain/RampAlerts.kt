@@ -5,7 +5,7 @@ import kotlin.math.roundToInt
 
 enum class AlertLevel { INFO, CAUTION, WARNING }
 
-enum class AlertKind { THUNDERSTORM, WIND, VISIBILITY, FREEZING, HEAT, PRECIPITATION, DUST, STALE }
+enum class AlertKind { THUNDERSTORM, WIND, VISIBILITY, FREEZING, HEAT, COLD, PRECIPITATION, DUST, STALE }
 
 data class RampAlert(val level: AlertLevel, val kind: AlertKind, val title: String, val detail: String)
 
@@ -16,6 +16,11 @@ data class RampAlert(val level: AlertLevel, val kind: AlertKind, val title: Stri
  */
 object RampAlerts {
     const val STALE_AFTER_MIN = 90
+    const val HEAT_CAUTION_C = 32.0
+    const val HEAT_WARNING_C = 41.0
+    const val WIND_CHILL_CAUTION_C = -10.0
+    /** Exposed skin can freeze in 30 minutes or less below about -27 °C wind chill. */
+    const val WIND_CHILL_WARNING_C = -27.0
 
     fun from(c: Conditions?, gustCautionKt: Int, highWindKt: Int, now: Long): List<RampAlert> {
         if (c?.metarRaw == null) return emptyList()
@@ -86,10 +91,27 @@ object RampAlerts {
             )
         }
 
-        if (temp != null && temp >= 35) {
-            alerts += RampAlert(
-                AlertLevel.CAUTION, AlertKind.HEAT, "Heat ${temp.roundToInt()}°C",
-                "Heat-stress risk on the apron: hydrate and rotate crews.",
+        // Heat and cold stress from what it feels like, with the iOS app's thresholds.
+        val heat = if (temp != null && c.dewpointC != null) HeatStress.heatIndexC(temp, c.dewpointC) else null
+        val chill = if (temp != null && c.windSpeedKt != null) HeatStress.windChillC(temp, c.windSpeedKt.toDouble()) else null
+        when {
+            heat != null && heat >= HEAT_WARNING_C -> alerts += RampAlert(
+                AlertLevel.WARNING, AlertKind.HEAT, "Extreme heat, feels like ${heat.roundToInt()}°C",
+                "Rotate crews, take shade breaks and drink water every 15 to 20 minutes. Watch each other for heat illness.",
+            )
+            heat != null && heat >= HEAT_CAUTION_C -> alerts += RampAlert(
+                AlertLevel.CAUTION, AlertKind.HEAT, "Heat stress, feels like ${heat.roundToInt()}°C",
+                "Drink about 250 ml every 20 minutes, even if not thirsty. Take breaks in the shade.",
+            )
+        }
+        when {
+            chill != null && chill <= WIND_CHILL_WARNING_C -> alerts += RampAlert(
+                AlertLevel.WARNING, AlertKind.COLD, "Frostbite risk, wind chill ${chill.roundToInt()}°C",
+                "Exposed skin can freeze in 30 minutes or less. Cover up fully and limit time outside.",
+            )
+            chill != null && chill <= WIND_CHILL_CAUTION_C -> alerts += RampAlert(
+                AlertLevel.CAUTION, AlertKind.COLD, "Very cold, wind chill ${chill.roundToInt()}°C",
+                "Wear insulated gloves and cover exposed skin. Warm up between tasks.",
             )
         }
         if (has("DS") || has("SS") || has("SA") || has("DU")) {

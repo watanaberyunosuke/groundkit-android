@@ -8,10 +8,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import com.harrydatabub.motherduck_aviation_data_android.ui.AppRoot
 import com.harrydatabub.motherduck_aviation_data_android.ui.AppViewModel
+import com.harrydatabub.motherduck_aviation_data_android.ui.ShiftViewModel
 import java.io.File
 
 class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels()
+    private val shiftVm: ShiftViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,6 +22,6 @@ class MainActivity : ComponentActivity() {
             runCatching { HttpResponseCache.install(File(cacheDir, "http"), 50L * 1024 * 1024) }
         }
         enableEdgeToEdge()
-        setContent { AppRoot(vm) }
+        setContent { AppRoot(vm, shiftVm) }
     }
 }
