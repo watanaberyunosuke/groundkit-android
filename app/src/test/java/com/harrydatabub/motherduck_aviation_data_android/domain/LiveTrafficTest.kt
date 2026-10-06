@@ -28,11 +28,59 @@ class LiveTrafficTest {
 
     private fun aircraft(
         callsign: String?, lat: Double, lon: Double = hkgLon, track: Double = 0.0, speed: Int? = 300,
-        onGround: Boolean = false, icao24: String = callsign ?: "abc123",
-    ) = LiveAircraft(icao24, callsign, lat, lon, if (onGround) 0 else 20_000, onGround, speed, track, 0)
+        onGround: Boolean = false, icao24: String = callsign ?: "abc123", vrate: Int? = 0, dir: String? = null,
+    ) = LiveAircraft(icao24, callsign, lat, lon, if (onGround) 0 else 20_000, onGround, speed, track, vrate, dir)
 
-    private fun place(list: List<LiveAircraft>, history: Map<String, CallsignHistory>) =
-        LiveTraffic.place(list, hkgLat, hkgLon, history, 15.0, 10.0, zone, now, codes)
+    private fun place(
+        list: List<LiveAircraft>, history: Map<String, CallsignHistory>, directions: DirectionMemory = DirectionMemory(),
+    ) = LiveTraffic.place(list, hkgLat, hkgLon, history, 15.0, 10.0, zone, now, codes, directions)
+
+    private val bothWays = mapOf("CPA710" to CallsignHistory(inbound = usual("12:25"), outbound = usual("13:30")))
+
+    @Test
+    fun nearTheAirportVerticalRateBeatsHeadingForCallsignsFlownBothWays() {
+        // 10 NM south, pointing away (downwind) but descending: an arrival.
+        assertEquals(Placement.INBOUND, place(listOf(aircraft("CPA710", southOf(10.0), track = 180.0, vrate = -800)), bothWays).single().placement)
+        // Pointing at the airport but climbing: a departure.
+        assertEquals(Placement.OUTBOUND, place(listOf(aircraft("CPA710", southOf(10.0), track = 0.0, vrate = 1500)), bothWays).single().placement)
+        // Level: the heading decides, as before.
+        assertEquals(Placement.OUTBOUND, place(listOf(aircraft("CPA710", southOf(10.0), track = 180.0, vrate = 0)), bothWays).single().placement)
+    }
+
+    @Test
+    fun anArrivalStaysInboundUntilItLands() {
+        val directions = DirectionMemory()
+        fun fix(a: LiveAircraft) = place(listOf(a), bothWays, directions).single().placement
+        assertEquals(Placement.INBOUND, fix(aircraft("CPA710", southOf(25.0), track = 0.0, vrate = -500)))
+        // Level on downwind, pointing away: still inbound.
+        assertEquals(Placement.INBOUND, fix(aircraft("CPA710", southOf(10.0), track = 180.0, vrate = 0)))
+        // Go-around: climbing does not make it a departure.
+        assertEquals(Placement.INBOUND, fix(aircraft("CPA710", southOf(5.0), track = 0.0, vrate = 2000)))
+        // Landed, then later airborne again: decided afresh.
+        assertEquals(Placement.GROUND, fix(aircraft("CPA710", hkgLat, onGround = true, speed = 20)))
+        assertEquals(Placement.OUTBOUND, fix(aircraft("CPA710", southOf(5.0), track = 180.0, vrate = 2000)))
+    }
+
+    @Test
+    fun aDescentTurnsAnEarlierOutboundIntoInbound() {
+        val directions = DirectionMemory()
+        fun fix(a: LiveAircraft) = place(listOf(a), bothWays, directions).single().placement
+        // First seen level on downwind, pointing away: taken for a departure...
+        assertEquals(Placement.OUTBOUND, fix(aircraft("CPA710", southOf(10.0), track = 180.0, vrate = 0)))
+        // ...until it descends on base.
+        assertEquals(Placement.INBOUND, fix(aircraft("CPA710", southOf(8.0), track = 90.0, vrate = -700)))
+    }
+
+    @Test
+    fun theApiDirectionIsUsedWhenPresent() {
+        val history = mapOf("CPA710" to CallsignHistory(inbound = usual("12:25")))
+        // Flying away 100 NM out is other traffic by the local rules; the API says inbound.
+        val p = place(listOf(aircraft("CPA710", southOf(100.0), track = 180.0, dir = "inbound")), history).single()
+        assertEquals(Placement.INBOUND, p.placement)
+        assertEquals("SIN", p.other)
+        val local = place(listOf(aircraft("CPA710", southOf(100.0), track = 180.0)), history).single()
+        assertEquals(Placement.OTHER, local.placement)
+    }
 
     @Test
     fun wrapsTimesOfDayAcrossMidnight() {

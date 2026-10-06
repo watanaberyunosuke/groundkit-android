@@ -134,6 +134,8 @@ data class LiveAircraft(
     val speedKt: Int?,
     val trackDeg: Double?,
     val vrateFpm: Int?,
+    /** The API's direction for this fix: inbound, outbound, ground or other; null if it had none. */
+    val dir: String? = null,
 )
 
 data class LiveFeed(val at: Long, val source: String, val aircraft: List<LiveAircraft>)
