@@ -126,12 +126,13 @@ object RampAlerts {
 
         c.metarObservedAt?.let { observed ->
             val age = ((now - observed) / MINUTE_MS).toInt()
-            // The pipeline loads METARs twice a day, so an old report is normal, not an
-            // alarm; it is still worth saying so staff check ATIS before relying on it.
+            // The pipeline loads METARs every hour, but its runs can be hours late, so an
+            // old report is normal, not an alarm; it is still worth saying so staff check
+            // ATIS before relying on it.
             if (age > STALE_AFTER_MIN) {
                 alerts += RampAlert(
                     AlertLevel.INFO, AlertKind.STALE, "Latest METAR is ${ageText(age)} old",
-                    "Weather is loaded twice a day. Check ATIS or ops for current conditions.",
+                    "Weather is loaded hourly and can run late. Check ATIS or ops for current conditions.",
                 )
             }
         }

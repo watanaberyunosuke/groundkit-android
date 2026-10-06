@@ -99,7 +99,7 @@ private fun WeatherTab(state: UiState, snap: AirportSnapshot, now: Long, onSelec
         item {
             SectionCard(
                 "Current conditions",
-                subtitle = c?.metarObservedAt?.let { "METAR ${Fmt.zulu(it)} (${Fmt.age(it, now)}). Loaded twice a day." },
+                subtitle = c?.metarObservedAt?.let { "METAR ${Fmt.zulu(it)} (${Fmt.age(it, now)}). Loaded hourly." },
                 trailing = { c?.flightCategory?.let { CategoryBadge(it, large = true) } },
             ) {
                 if (c?.metarRaw == null) {
