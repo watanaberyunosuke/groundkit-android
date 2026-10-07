@@ -1,8 +1,8 @@
 package com.harrydatabub.motherduck_aviation_data_android.domain
 
 import com.harrydatabub.motherduck_aviation_data_android.data.ShiftStore
+import com.harrydatabub.motherduck_aviation_data_android.data.ShiftSummary
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -33,15 +33,6 @@ class ShiftTest {
     }
 
     @Test
-    fun breakPromptEveryTwoHours() {
-        assertFalse(ShiftAdvice.breakDue(119))
-        assertTrue(ShiftAdvice.breakDue(120))
-        assertTrue(ShiftAdvice.breakDue(134))
-        assertFalse(ShiftAdvice.breakDue(135))
-        assertTrue(ShiftAdvice.breakDue(245))
-    }
-
-    @Test
     fun recordsSurviveARestart() {
         val dir = Files.createTempDirectory("records").toFile()
         val store = ShiftStore(dir)
@@ -60,11 +51,15 @@ class ShiftTest {
         assertEquals("GPU 3 faulty", reopened.notes.single().text)
         assertTrue(reopened.notes.single().isImportant)
 
+        store.logBreak(now = 2_500)
         store.resolveNote(noteId, now = 3_000)
-        store.endShift(now = 4_000)
+        val summary = ShiftSummary(steps = 4_200, heartRateMax = 151, waterMl = 750.0, waterTargetMl = 900.0, breaks = 1, longestWithoutBreakMs = 1_500)
+        store.endShift(now = 4_000, summary = summary)
         val after = ShiftStore(dir).records.value
         assertNull(after.activeShift)
         assertEquals(3_000L, after.shifts.single().durationMs(0))
+        assertEquals(listOf(2_500L), after.shifts.single().breaks)
+        assertEquals(summary, after.shifts.single().summary)
         assertEquals(3_000L, after.notes.single().resolvedAt)
     }
 }

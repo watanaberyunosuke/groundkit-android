@@ -45,6 +45,11 @@ class HealthRationaleActivity : ComponentActivity() {
                                 "and water from Health Connect, counted from when you started the shift, to show how " +
                                 "the shift is going and when to drink.",
                         )
+                        Para(
+                            "It also reads your sleep from the last two days, to warn when you start a shift short " +
+                                "of sleep, and your recent heart rate in hot weather, to warn of heat strain. At the " +
+                                "end of a shift it keeps a summary of the shift on this device.",
+                        )
                         Para("When you log a drink with the water buttons, Ramp Ops saves it to Health Connect.")
                         Para(
                             "Health data stays on this device. Ramp Ops does not send it anywhere, does not share it " +

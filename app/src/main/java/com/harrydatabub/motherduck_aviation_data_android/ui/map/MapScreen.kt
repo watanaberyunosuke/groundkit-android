@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.harrydatabub.motherduck_aviation_data_android.data.MyFix
 import com.harrydatabub.motherduck_aviation_data_android.data.TrackLine
 import com.harrydatabub.motherduck_aviation_data_android.domain.Dir
 import com.harrydatabub.motherduck_aviation_data_android.domain.Placement
@@ -91,10 +92,14 @@ private const val MAX_ZOOM = 12f
 private const val DEFAULT_ZOOM = 9f
 
 /** Web Mercator, normalised to 0..1 on both axes. */
-private fun mercator(lat: Double, lon: Double): Offset {
+internal fun mercatorX(lon: Double): Double = (lon + 180) / 360
+
+internal fun mercatorY(lat: Double): Double {
     val s = sin(lat * PI / 180)
-    return Offset(((lon + 180) / 360).toFloat(), (0.5 - ln((1 + s) / (1 - s)) / (4 * PI)).toFloat())
+    return 0.5 - ln((1 + s) / (1 - s)) / (4 * PI)
 }
+
+private fun mercator(lat: Double, lon: Double): Offset = Offset(mercatorX(lon).toFloat(), mercatorY(lat).toFloat())
 
 /**
  * Live airspace around the airport, as the Dive's map: live aircraft within 500 NM
@@ -108,6 +113,7 @@ fun MapScreen(
     selected: String?,
     onSelect: (String?) -> Unit,
     onDetails: (FlightItem) -> Unit,
+    me: MyFix? = null,
 ) {
     val snap = state.snapshot ?: return
     val traffic = state.traffic
@@ -170,7 +176,7 @@ fun MapScreen(
         ) {
             canvasSize = size
             drawRect(status.mapBackground)
-            drawTiles(tiles, dark, zoom, center, tilePx)
+            drawTiles(tiles, dark, zoom, center.x.toDouble(), center.y.toDouble(), tilePx)
 
             val ws = worldSize()
             val origin = Offset(size.width / 2, size.height / 2) - center * ws
@@ -224,6 +230,8 @@ fun MapScreen(
             // The airport, coloured by flight category.
             drawCircle(status.halo, radius = 12.dp.toPx(), center = homePx)
             drawCircle(categoryColorRaw(snap.conditions?.flightCategory, status), radius = 9.dp.toPx(), center = homePx)
+            // Me, on top.
+            me?.let { drawMe(origin + mercator(it.lat, it.lon) * ws, 0f, it.bearingDeg, status.arrivalPath, status.halo) }
         }
 
         // Zoom controls: large, thumb-sized.
@@ -320,23 +328,29 @@ private fun categoryColorRaw(category: String?, s: StatusColors) = when (categor
     else -> s.unknown
 }
 
-private fun DrawScope.drawTiles(tiles: TileCache, dark: Boolean, zoom: Float, center: Offset, tilePx: Float) {
+/**
+ * The basemap around normalised point (cx, cy). Positions are worked out in doubles: at
+ * street zooms a float loses whole pixels. Above [TileCache.MAX_LEVEL] the deepest tiles
+ * are scaled up.
+ */
+internal fun DrawScope.drawTiles(tiles: TileCache, dark: Boolean, zoom: Float, cx: Double, cy: Double, tilePx: Float) {
     tiles.version.intValue // redraw when a tile arrives
-    val z = floor(zoom).toInt()
+    val z = floor(zoom).toInt().coerceAtMost(TileCache.MAX_LEVEL)
     val n = 1 shl z
-    val ws = tilePx * 2f.pow(zoom)
+    val ws = tilePx * 2.0.pow(zoom.toDouble())
     val size = ws / n // on-screen size of one tile at level z
-    val origin = Offset(this.size.width / 2, this.size.height / 2) - center * ws
-    val x0 = floor(-origin.x / size).toInt()
-    val y0 = floor(-origin.y / size).toInt()
-    val x1 = floor((this.size.width - origin.x) / size).toInt()
-    val y1 = floor((this.size.height - origin.y) / size).toInt()
+    val ox = this.size.width / 2 - cx * ws
+    val oy = this.size.height / 2 - cy * ws
+    val x0 = floor(-ox / size).toInt()
+    val y0 = floor(-oy / size).toInt()
+    val x1 = floor((this.size.width - ox) / size).toInt()
+    val y1 = floor((this.size.height - oy) / size).toInt()
     for (tx in x0..x1) for (ty in y0..y1) {
         if (ty < 0 || ty >= n) continue
         val wrapped = ((tx % n) + n) % n
         val img = tiles.get(tiles.url(dark, z, wrapped, ty)) ?: continue
-        val left = origin.x + tx * size
-        val top = origin.y + ty * size
+        val left = ox + tx * size
+        val top = oy + ty * size
         // Half a pixel of overlap hides seams between tiles.
         drawImage(
             img,
@@ -365,14 +379,14 @@ private fun DrawScope.drawAircraft(p: Offset, trackDeg: Double, fill: Color, hal
 }
 
 @Composable
-private fun MapButton(icon: ImageVector, label: String, onClick: () -> Unit) {
+internal fun MapButton(icon: ImageVector, label: String, onClick: () -> Unit) {
     FilledTonalIconButton(onClick = onClick, modifier = Modifier.size(52.dp)) {
         Icon(icon, contentDescription = label)
     }
 }
 
 @Composable
-private fun Legend(color: Color, text: String) {
+internal fun Legend(color: Color, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 1.dp)) {
         Dot(color)
         Spacer(Modifier.width(6.dp))

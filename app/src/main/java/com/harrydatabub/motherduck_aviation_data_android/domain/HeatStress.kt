@@ -69,8 +69,16 @@ object ShiftAdvice {
         return maxOf(perHour, perHour * hoursOnShift)
     }
 
-    /** A break prompt for the first 15 minutes of every second hour on shift. */
-    fun breakDue(minutesOnShift: Long): Boolean = minutesOnShift >= 120 && minutesOnShift % 120 < 15
+    /** A break is due after 2 hours of work since the shift started or the last break. */
+    const val BREAK_EVERY_MS = 2 * HOUR_MS
+
+    fun breakDue(workingSince: Long, now: Long): Boolean = now - workingSince >= BREAK_EVERY_MS
+
+    /** The longest stretch worked without a logged break. */
+    fun longestStretchMs(start: Long, breaks: List<Long>, end: Long): Long {
+        val marks = listOf(start) + breaks.filter { it in start..end }.sorted() + end
+        return marks.zipWithNext { a, b -> b - a }.maxOrNull() ?: 0
+    }
 
     /** Sustained exposure at or above 85 dB(A) calls for hearing protection. */
     const val HEARING_PROTECTION_DB = 85
