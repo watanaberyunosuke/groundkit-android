@@ -9,18 +9,6 @@ import com.harrydatabub.motherduck_aviation_data_android.data.FlightFilter
  */
 object Operators {
     /**
-     * All-cargo operators by ICAO designator. Combination carriers that fly freighters
-     * under their passenger callsigns (Cathay, Qantas, Emirates...) cannot be told apart
-     * from their passenger flights on ADS-B, so they are not listed.
-     */
-    val CARGO: Set<String> = setOf(
-        "ABR", "ABW", "ABX", "ADB", "AER", "AHK", "AJT", "ATN", "AZG", "BCS", "BOX", "CAO",
-        "CKK", "CKS", "CLX", "CSS", "DAE", "DHK", "FDX", "GEC", "GTI", "ICV", "KYE", "LCO",
-        "MPH", "NCA", "NPT", "PAC", "SOO", "SQC", "SWN", "TAY", "TMN", "UPS", "VDA", "WGN",
-        "YZR",
-    )
-
-    /**
      * The user's airlines as ICAO designators. Accepts ICAO (CPA) or IATA (CX) codes
      * separated by commas or spaces; an IATA code maps to every airline using it.
      */
@@ -41,7 +29,6 @@ object Operators {
 
     fun matches(callsign: String?, filter: FlightFilter, mine: Set<String>): Boolean = when (filter) {
         FlightFilter.ALL -> true
-        FlightFilter.CARGO -> designator(callsign) in CARGO
         FlightFilter.MINE -> designator(callsign) in mine
     }
 }

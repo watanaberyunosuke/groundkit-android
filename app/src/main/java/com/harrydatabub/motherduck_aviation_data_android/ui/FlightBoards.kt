@@ -51,6 +51,8 @@ data class FlightItem(
     val usual: Usual? = null,
     /** False for live traffic not recognised as one of this airport's flights. */
     val recognised: Boolean = true,
+    /** Flown by an all-cargo operator. Passenger flights may carry cargo too. */
+    val freighter: Boolean = false,
 )
 
 data class FlightSection(val title: String, val note: String, val items: List<FlightItem>, val collapsed: Boolean = false)
@@ -139,6 +141,7 @@ object FlightBoards {
             timeLabel = "", time = null, estimated = false,
             status = if (a.live.onGround) "On the ground" else "Other traffic", tone = Tone.NEUTRAL,
             detail = positionText(a), aircraft = a, recognised = false,
+            freighter = snap.codes.isFreighter(a.live.callsign),
         )
     }
 
@@ -171,6 +174,7 @@ object FlightBoards {
             detail = positionText(a),
             aircraft = a,
             usual = snap.history[b.callsign]?.get(b.dir),
+            freighter = snap.codes.isFreighter(b.callsign),
         )
     }
 
@@ -197,6 +201,7 @@ object FlightBoards {
             detail = usual?.let { "Seen ${it.days14} of the last 14 days" },
             muted = past,
             usual = usual,
+            freighter = snap.codes.isFreighter(r.callsign),
         )
     }
 

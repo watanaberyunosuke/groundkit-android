@@ -88,9 +88,13 @@ class RampAlertsAndOperatorsTest {
         val mine = setOf("CPA")
         assertTrue(Operators.matches("CPA101", FlightFilter.MINE, mine))
         assertFalse(Operators.matches("SIA1", FlightFilter.MINE, mine))
-        assertTrue(Operators.matches("FDX5150", FlightFilter.CARGO, mine))
-        assertFalse(Operators.matches("CPA101", FlightFilter.CARGO, mine))
-        assertFalse(Operators.matches("B1234", FlightFilter.CARGO, mine)) // registration, not an airline
+        val codes = FlightCodes(airlines, cargoOperators = setOf("FDX"))
+        assertTrue(codes.isFreighter("FDX5150"))
+        assertFalse(codes.isFreighter("CPA101"))
+        assertFalse(codes.isFreighter("B1234")) // registration, not an airline
+        // Passenger flights carry belly cargo, so no filter hides them for being passenger.
+        assertTrue(Operators.matches("CPA101", FlightFilter.ALL, mine))
+        assertTrue(Operators.matches("FDX5150", FlightFilter.ALL, mine))
         assertTrue(Operators.matches(null, FlightFilter.ALL, mine))
     }
 

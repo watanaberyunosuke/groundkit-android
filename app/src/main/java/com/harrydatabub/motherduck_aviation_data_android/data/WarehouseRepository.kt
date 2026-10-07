@@ -44,6 +44,7 @@ class WarehouseRepository(private val api: AviationApi) {
         return Warehouse(
             airports = parse(AIRPORTS)?.let(::airports).orEmpty(),
             airlines = parse(AIRLINES)?.let(::airlines).orEmpty(),
+            cargoOperators = parse(CARGO_OPERATORS)?.let(::cargoOperators).orEmpty(),
             conditions = parse(CONDITIONS)?.let(::conditions).orEmpty(),
             weatherHourly = parse(WEATHER_HOURLY)?.let(::weatherHourly).orEmpty(),
             movements = parse(MOVEMENTS)?.let(::movements).orEmpty(),
@@ -81,6 +82,11 @@ class WarehouseRepository(private val api: AviationApi) {
         return (0 until t.numRows).mapNotNull { r ->
             icao.string(r)?.let { Airline(it, iata.string(r), name.string(r)) }
         }.associateBy { it.icao }
+    }
+
+    private fun cargoOperators(t: ParquetTable): Set<String> {
+        val icao = t["icao"]
+        return (0 until t.numRows).mapNotNull { icao.string(it) }.toSet()
     }
 
     private fun conditions(t: ParquetTable): Map<String, Conditions> {
@@ -222,6 +228,7 @@ class WarehouseRepository(private val api: AviationApi) {
     companion object {
         const val AIRPORTS = "reference.airports"
         const val AIRLINES = "reference.airlines"
+        const val CARGO_OPERATORS = "reference.cargo_operators"
         const val CONDITIONS = "marts.fct_airport_conditions"
         const val WEATHER_HOURLY = "marts.fct_airport_weather_hourly"
         const val MOVEMENTS = "marts.fct_daily_airport_movements"
@@ -233,7 +240,7 @@ class WarehouseRepository(private val api: AviationApi) {
 
         /** The allow-list in api/index.py. */
         val TABLES = listOf(
-            AIRPORTS, AIRLINES, CONDITIONS, WEATHER_HOURLY, MOVEMENTS,
+            AIRPORTS, AIRLINES, CARGO_OPERATORS, CONDITIONS, WEATHER_HOURLY, MOVEMENTS,
             ARRIVALS, DEPARTURES, IMPACT, TRACKS, NOTAMS,
         )
         private val ESSENTIAL = listOf(AIRPORTS, CONDITIONS)

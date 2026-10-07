@@ -396,6 +396,20 @@ fun FlightRow(
                     color = (if (item.codeIsCallsign) muted else MaterialTheme.colorScheme.onSurface).copy(alpha = alpha),
                     maxLines = 1,
                 )
+                if (item.freighter) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Freighter",
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = alpha))
+                            .padding(horizontal = 6.dp, vertical = 1.dp),
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                    )
+                }
                 Spacer(Modifier.weight(1f))
                 Text(
                     (if (item.dir == Dir.INBOUND) "from " else "to ") + (item.other ?: "–"),
@@ -439,7 +453,6 @@ fun FilterRow(
             ),
         )
         chip(FlightFilter.ALL, "All flights")
-        chip(FlightFilter.CARGO, "Cargo operators")
         if (mineCount > 0) chip(FlightFilter.MINE, "My airlines ($mineCount)")
         else chip(FlightFilter.MINE, "Set my airlines…", onClick = onConfigureMine)
     }

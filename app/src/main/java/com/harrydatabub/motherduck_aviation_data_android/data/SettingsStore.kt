@@ -7,8 +7,12 @@ import kotlinx.coroutines.flow.asStateFlow
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
-/** Which flights the boards show. */
-enum class FlightFilter { ALL, CARGO, MINE }
+/**
+ * Which flights the boards show. There is no cargo-only filter: passenger flights carry
+ * belly cargo, so hiding them hides cargo work. Flights by the all-cargo operators the
+ * backend lists (reference.cargo_operators) are tagged instead.
+ */
+enum class FlightFilter { ALL, MINE }
 
 data class Settings(
     /** Selected airport, by IATA code (as the web Dive's ?airport= parameter). */

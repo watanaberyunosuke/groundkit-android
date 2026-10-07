@@ -51,7 +51,10 @@ fun ragText(delayMin: Double?): String = when {
 }
 
 /** ICAO callsign to IATA flight number: QFA627 -> QF627, as stg_opensky_flights does. */
-class FlightCodes(private val airlines: Map<String, Airline>) {
+class FlightCodes(
+    private val airlines: Map<String, Airline>,
+    private val cargoOperators: Set<String> = emptySet(),
+) {
     private val pattern = Regex("^([A-Z]{3})0*(\\d{1,4})$")
 
     fun flightIata(callsign: String?): String? {
@@ -62,6 +65,9 @@ class FlightCodes(private val airlines: Map<String, Airline>) {
 
     fun airlineName(callsign: String?): String? =
         callsign?.takeIf { it.length >= 3 }?.let { airlines[it.substring(0, 3)]?.name }
+
+    /** Flown by an all-cargo operator, as the backend's reference.cargo_operators lists them. */
+    fun isFreighter(callsign: String?): Boolean = Operators.designator(callsign) in cargoOperators
 }
 
 /**

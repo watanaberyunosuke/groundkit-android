@@ -108,6 +108,8 @@ data class Airline(val icao: String, val iata: String?, val name: String?)
 data class Warehouse(
     val airports: List<Airport>,
     val airlines: Map<String, Airline>,
+    /** reference.cargo_operators: ICAO designators of all-cargo operators. */
+    val cargoOperators: Set<String>,
     val conditions: Map<String, Conditions>,
     val weatherHourly: List<WeatherHour>,
     val movements: List<DailyMovements>,

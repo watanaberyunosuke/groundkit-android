@@ -76,7 +76,6 @@ fun NowScreen(
     val nextDepartures = departures?.let { it[0].items + it[2].items }?.take(4)
     val filterNote = when (filter) {
         FlightFilter.ALL -> null
-        FlightFilter.CARGO -> "Cargo operators only"
         FlightFilter.MINE -> "My airlines only"
     }
 

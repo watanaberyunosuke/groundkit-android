@@ -55,7 +55,7 @@ data class AirportSnapshot(
                 hourly = w.weatherHourly.filter { it.icao == icao && it.hourUtc >= now - 3 * DAY_MS }.sortedBy { it.hourUtc },
                 movements = w.movements.filter { it.icao == icao && it.dayEpochDay >= now / DAY_MS - 30 }
                     .sortedBy { it.dayEpochDay },
-                codes = FlightCodes(w.airlines),
+                codes = FlightCodes(w.airlines, w.cargoOperators),
             )
         }
     }
