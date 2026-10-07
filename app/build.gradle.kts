@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "com.harrydatabub.motherduck_aviation_data_android"
+    namespace = "com.harrydatahub.groundkit"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.harrydatabub.motherduck_aviation_data_android"
+        applicationId = "com.harrydatahub.groundkit"
         // java.time (time zones for local airport times) without desugaring.
         minSdk = 26
         targetSdk = 37

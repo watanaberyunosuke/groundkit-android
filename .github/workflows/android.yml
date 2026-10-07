@@ -70,7 +70,7 @@ jobs:
 
       - uses: actions/upload-artifact@v5
         with:
-          name: ramp-ops-${{ github.sha }}
+          name: groundkit-${{ github.sha }}
           path: |
             app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/release/*.apk
@@ -93,7 +93,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v5
         with:
-          name: ramp-ops-${{ github.sha }}
+          name: groundkit-${{ github.sha }}
           path: apk
       - name: Create release
         env:

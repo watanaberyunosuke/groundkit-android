@@ -1,4 +1,4 @@
-# Ramp Ops (Android)
+# GroundKit (Android)
 
 An Android app for apron, ramp and cargo staff, built on the same backend as
 [motherduck-aviation-data-analysis](../motherduck-aviation-data-analysis): the MotherDuck
@@ -8,6 +8,8 @@ warehouse behind its Vercel API. The backend is used unchanged:
 - `GET /api/live/<icao>`: live aircraft within 500 NM (OpenSky, falling back to adsb.lol).
 
 The base URL is `API_BASE` in `app/build.gradle.kts`.
+
+The app was called Ramp Ops until October 2026. Its application ID changed with the name (now `com.harrydatahub.groundkit`), so GroundKit installs as a new app; shifts and notes kept by Ramp Ops on a phone are not carried over.
 
 ## What it shows
 
