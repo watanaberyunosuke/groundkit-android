@@ -97,6 +97,7 @@ class AviationApi(private val baseUrl: String, cacheRoot: File) {
                             trackDeg = a.optNumber("track_deg")?.toDouble(),
                             vrateFpm = a.optNumber("vrate_fpm")?.toInt(),
                             dir = a.optStringOrNull("dir"),
+                            isFreighter = if (a.isNull("is_freighter")) null else a.optBoolean("is_freighter"),
                         ),
                     )
                 }

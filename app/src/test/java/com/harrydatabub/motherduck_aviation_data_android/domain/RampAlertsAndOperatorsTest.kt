@@ -88,10 +88,6 @@ class RampAlertsAndOperatorsTest {
         val mine = setOf("CPA")
         assertTrue(Operators.matches("CPA101", FlightFilter.MINE, mine))
         assertFalse(Operators.matches("SIA1", FlightFilter.MINE, mine))
-        val codes = FlightCodes(airlines, cargoOperators = setOf("FDX"))
-        assertTrue(codes.isFreighter("FDX5150"))
-        assertFalse(codes.isFreighter("CPA101"))
-        assertFalse(codes.isFreighter("B1234")) // registration, not an airline
         // Passenger flights carry belly cargo, so no filter hides them for being passenger.
         assertTrue(Operators.matches("CPA101", FlightFilter.ALL, mine))
         assertTrue(Operators.matches("FDX5150", FlightFilter.ALL, mine))
@@ -102,16 +98,19 @@ class RampAlertsAndOperatorsTest {
     fun parsesTheLiveEndpoint() {
         val feed = AviationApi.parseLive(
             """{"time":1791196902,"source":"adsb.lol","failed":["OpenSky: HTTP 429"],"aircraft":[
-              {"icao24":"76b455","callsign":"SIA194 ","lon":105.6,"lat":21.2,"alt_ft":3975,"on_ground":false,"speed_kt":180,"track_deg":21.15,"vrate_fpm":-960},
-              {"icao24":"780a1b","callsign":null,"lon":113.9,"lat":22.3,"alt_ft":0,"on_ground":true,"speed_kt":null,"track_deg":null,"vrate_fpm":null}]}""",
+              {"icao24":"76b455","callsign":"SIA194 ","lon":105.6,"lat":21.2,"alt_ft":3975,"on_ground":false,"speed_kt":180,"track_deg":21.15,"vrate_fpm":-960,"is_freighter":false},
+              {"icao24":"780a1b","callsign":null,"lon":113.9,"lat":22.3,"alt_ft":0,"on_ground":true,"speed_kt":null,"track_deg":null,"vrate_fpm":null},
+              {"icao24":"a1b2c3","callsign":"FDX5150","lon":113.0,"lat":22.0,"alt_ft":9000,"on_ground":false,"speed_kt":300,"track_deg":90,"vrate_fpm":0,"is_freighter":true}]}""",
         )
         assertEquals(1_791_196_902_000L, feed.at)
         assertEquals("adsb.lol", feed.source)
-        assertEquals(2, feed.aircraft.size)
+        assertEquals(3, feed.aircraft.size)
         assertEquals("SIA194", feed.aircraft[0].callsign)
         assertEquals(-960, feed.aircraft[0].vrateFpm)
         assertNull(feed.aircraft[1].callsign)
         assertNull(feed.aircraft[1].speedKt)
         assertTrue(feed.aircraft[1].onGround)
+        // The backend's freighter tag; null where it sent none.
+        assertEquals(listOf(false, null, true), feed.aircraft.map { it.isFreighter })
     }
 }

@@ -24,7 +24,7 @@ The **map** opens from Now and from any flight: live aircraft coloured by delay 
 Ramp-specific additions not in the web Dive:
 
 - **Ramp weather alerts** from the latest METAR: thunderstorm or hail, gusts and high wind (thresholds set in Settings to match station limits), low visibility, freezing conditions, heat stress by heat index and cold by wind chill (the iOS app's thresholds), rain, plus a note when the METAR is old. They are advisories; local procedures take precedence.
-- **Filters**: all flights or *My airlines* (the IATA or ICAO codes of the airlines you handle). There is no cargo-only filter, since passenger flights carry belly cargo too; flights by the all-cargo operators the backend lists in `reference.cargo_operators` are tagged *Freighter* instead.
+- **Filters**: all flights or *My airlines* (the IATA or ICAO codes of the airlines you handle). There is no cargo-only filter, since passenger flights carry belly cargo too; flights the backend tags as freighters (`is_freighter` on the flight marts and `/api/live`, from its `cargo_operators` list) are tagged *Freighter* instead.
 - **Built for outdoor use**: large type and touch targets, status shown as icon, word and colour, a high-contrast light theme and a hi-vis dark theme, an optional keep-screen-on setting, pull to refresh.
 - **Offline**: every table download is kept on the device. Without signal the app opens with the last data and says how old it is.
 

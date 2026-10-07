@@ -9,8 +9,8 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 /**
  * Which flights the boards show. There is no cargo-only filter: passenger flights carry
- * belly cargo, so hiding them hides cargo work. Flights by the all-cargo operators the
- * backend lists (reference.cargo_operators) are tagged instead.
+ * belly cargo, so hiding them hides cargo work. Flights the backend tags as freighters
+ * (is_freighter) are tagged instead.
  */
 enum class FlightFilter { ALL, MINE }
 

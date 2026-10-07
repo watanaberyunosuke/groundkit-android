@@ -1,10 +1,12 @@
 package com.harrydatabub.motherduck_aviation_data_android.domain
 
 import com.harrydatabub.motherduck_aviation_data_android.data.AviationApi
+import com.harrydatabub.motherduck_aviation_data_android.data.ObservedFlight
 import com.harrydatabub.motherduck_aviation_data_android.data.WarehouseRepository
 import com.harrydatabub.motherduck_aviation_data_android.data.parquet.Parquet
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -51,5 +53,19 @@ class FlightHistoryGoldenTest {
         }
         assertTrue("checked usual origins/destinations", checkedOther > 1000)
         assertEquals("no extra callsigns", rows.length(), history.values.sumOf { listOfNotNull(it.inbound, it.outbound).size })
+    }
+
+    @Test
+    fun keepsTheBackendFreighterTagPerCallsign() {
+        val now = 1_791_200_000_000L
+        fun seen(callsign: String, freighter: Boolean, daysAgo: Int) = ObservedFlight(
+            "VHHH", callsign, null, null, null, "RJAA", "NRT", now - daysAgo * DAY_MS, null, freighter,
+        )
+        val history = FlightHistory.build(
+            arrivals = listOf(seen("FDX5150", true, 1), seen("FDX5150", true, 2), seen("CPA101", false, 1)),
+            departures = emptyList(), icao = "VHHH", zone = ZoneId.of("Asia/Hong_Kong"), now = now,
+        )
+        assertTrue(history.getValue("FDX5150").inbound!!.freighter)
+        assertFalse(history.getValue("CPA101").inbound!!.freighter)
     }
 }
