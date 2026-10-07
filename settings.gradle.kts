@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "motherduck-aviation-data-android"
+rootProject.name = "groundkit-android"
 include(":app")
