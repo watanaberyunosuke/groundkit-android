@@ -20,6 +20,8 @@ data class Usual(
     val days14: Int,
     val count: Int,
     val recent: List<Long>,
+    /** Tagged by the backend as flown by an all-cargo operator. */
+    val freighter: Boolean = false,
 )
 
 data class CallsignHistory(val inbound: Usual? = null, val outbound: Usual? = null) {
@@ -63,6 +65,7 @@ object FlightHistory {
                         days14 = days,
                         count = seen.size,
                         recent = seen.map { it.at }.sortedDescending().take(7),
+                        freighter = seen.any { it.isFreighter },
                     )
                 }
 

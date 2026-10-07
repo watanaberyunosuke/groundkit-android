@@ -71,6 +71,8 @@ data class ObservedFlight(
     val at: Long,
     /** Arrivals: minutes inside 50 NM. Departures: minutes to leave 50 NM. */
     val terminalMinutes: Double?,
+    /** The backend's is_freighter: flown by an all-cargo operator. */
+    val isFreighter: Boolean = false,
 )
 
 /** marts.fct_arrival_weather_impact, only what the app uses. */
@@ -136,6 +138,8 @@ data class LiveAircraft(
     val vrateFpm: Int?,
     /** The API's direction for this fix: inbound, outbound, ground or other; null if it had none. */
     val dir: String? = null,
+    /** The API's is_freighter tag; null if it sent none. */
+    val isFreighter: Boolean? = null,
 )
 
 data class LiveFeed(val at: Long, val source: String, val aircraft: List<LiveAircraft>)

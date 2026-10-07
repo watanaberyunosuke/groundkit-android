@@ -144,6 +144,7 @@ class WarehouseRepository(private val api: AviationApi) {
         val terminal = t[if (arrival) "terminal_minutes" else "departure_terminal_minutes"]
         val callsign = t["callsign"]; val flightIata = t["flight_number_iata"]
         val icao24 = t["icao24"]; val airline = t["airline_name"]
+        val freighter = t.columnOrNull("is_freighter")
         return (0 until t.numRows).mapNotNull { r ->
             ObservedFlight(
                 airportIcao = here.string(r) ?: return@mapNotNull null,
@@ -155,6 +156,7 @@ class WarehouseRepository(private val api: AviationApi) {
                 otherIata = otherIata.string(r),
                 at = at.epochMillis(r) ?: return@mapNotNull null,
                 terminalMinutes = terminal.double(r),
+                isFreighter = freighter?.bool(r) == true,
             )
         }
     }
