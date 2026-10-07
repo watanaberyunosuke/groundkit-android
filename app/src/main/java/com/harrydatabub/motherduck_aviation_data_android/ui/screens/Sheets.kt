@@ -42,10 +42,15 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import com.harrydatabub.motherduck_aviation_data_android.BuildConfig
+import com.harrydatabub.motherduck_aviation_data_android.data.Airport
 import com.harrydatabub.motherduck_aviation_data_android.data.Settings
 import com.harrydatabub.motherduck_aviation_data_android.data.ThemeMode
+import com.harrydatabub.motherduck_aviation_data_android.domain.HeatStrain
+import com.harrydatabub.motherduck_aviation_data_android.domain.Solar
 import com.harrydatabub.motherduck_aviation_data_android.ui.AirportChoice
+import com.harrydatabub.motherduck_aviation_data_android.ui.Fmt
 import com.harrydatabub.motherduck_aviation_data_android.ui.components.CategoryBadge
+import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,6 +104,7 @@ fun AirportPickerSheet(
 fun SettingsSheet(
     settings: Settings,
     resolvedAirlines: Set<String>,
+    airport: Airport?,
     onChange: ((Settings) -> Settings) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -154,6 +160,22 @@ fun SettingsSheet(
             }
 
             Column {
+                Label("Heat strain")
+                Text(
+                    "Your age sets the heart-rate limit for heat-strain warnings on the Shift tab: 180 minus your age, " +
+                        "sustained for 5 minutes in the heat (NIOSH). Without it, ${HeatStrain.limitBpm(null)} bpm is used. " +
+                        "Kept on this device only.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Stepper(
+                    "Age", settings.age, 0..80, unit = "",
+                    shown = if (settings.age == 0) "Not set" else "${settings.age}",
+                    // 0 is "not set": step in and out of it from the adult range.
+                    step = { v, up -> if (up) (if (v == 0) 40 else v + 1) else (if (v <= 16) 0 else v - 1) },
+                ) { v -> onChange { it.copy(age = v) } }
+            }
+
+            Column {
                 Label("Theme")
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(top = 6.dp)) {
                     ThemeMode.entries.forEachIndexed { i, mode ->
@@ -162,11 +184,11 @@ fun SettingsSheet(
                             onClick = { onChange { it.copy(theme = mode) } },
                             shape = SegmentedButtonDefaults.itemShape(i, ThemeMode.entries.size),
                             modifier = Modifier.heightIn(min = 48.dp),
-                        ) { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                        ) { Text(mode.label, maxLines = 1) }
                     }
                 }
                 Text(
-                    "Dark is easier on the eyes on night shifts.",
+                    themeNote(settings.theme, airport),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
                 )
@@ -206,6 +228,23 @@ fun SettingsSheet(
     }
 }
 
+/** What the selected theme does; for Sunset, when it next switches at the airport. */
+private fun themeNote(mode: ThemeMode, airport: Airport?): String {
+    if (mode == ThemeMode.SYSTEM) return "Auto follows your phone's dark theme setting. Sunset goes dark at sunset at the airport instead."
+    if (mode != ThemeMode.SUNSET) return "Dark is easier on the eyes on night shifts."
+    airport ?: return "Dark from sunset to sunrise at the selected airport."
+    val now = System.currentTimeMillis()
+    val zone = runCatching { ZoneId.of(airport.timezone) }.getOrDefault(ZoneId.systemDefault())
+    val dark = Solar.isDark(airport.lat, airport.lon, now)
+    val next = Solar.nextChange(airport.lat, airport.lon, now)
+    return "Dark from sunset to sunrise at ${airport.iata}. " + when {
+        next == null && dark -> "The sun stays down there for now."
+        next == null -> "The sun stays up there for now."
+        dark -> "Sunrise ${Fmt.hm(next, zone)} local."
+        else -> "Sunset ${Fmt.hm(next, zone)} local."
+    }
+}
+
 @Composable
 private fun Label(text: String) = Text(text, style = MaterialTheme.typography.titleMedium)
 
@@ -213,14 +252,22 @@ private fun Label(text: String) = Text(text, style = MaterialTheme.typography.ti
 private fun About(text: String) = Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
 @Composable
-private fun Stepper(label: String, value: Int, range: IntRange, onValue: (Int) -> Unit) {
+private fun Stepper(
+    label: String,
+    value: Int,
+    range: IntRange,
+    unit: String = " kt",
+    shown: String = "$value$unit",
+    step: (value: Int, up: Boolean) -> Int = { v, up -> if (up) v + 1 else v - 1 },
+    onValue: (Int) -> Unit,
+) {
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        FilledTonalIconButton(onClick = { onValue((value - 1).coerceIn(range)) }, modifier = Modifier.size(48.dp)) {
+        FilledTonalIconButton(onClick = { onValue(step(value, false).coerceIn(range)) }, modifier = Modifier.size(48.dp)) {
             Icon(Icons.Filled.Remove, contentDescription = "Decrease $label")
         }
-        Text("$value kt", style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(64.dp).padding(horizontal = 8.dp))
-        FilledTonalIconButton(onClick = { onValue((value + 1).coerceIn(range)) }, modifier = Modifier.size(48.dp)) {
+        Text(shown, style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(80.dp).padding(horizontal = 8.dp))
+        FilledTonalIconButton(onClick = { onValue(step(value, true).coerceIn(range)) }, modifier = Modifier.size(48.dp)) {
             Icon(Icons.Filled.Add, contentDescription = "Increase $label")
         }
     }

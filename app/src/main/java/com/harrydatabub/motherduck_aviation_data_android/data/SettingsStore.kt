@@ -5,7 +5,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class ThemeMode { SYSTEM, LIGHT, DARK }
+/**
+ * SYSTEM ("Auto") follows the phone's dark theme setting, including its own schedule.
+ * SUNSET is dark from sunset to sunrise at the selected airport, for crews whose phones stay
+ * light through a night shift.
+ */
+enum class ThemeMode(val label: String) { SYSTEM("Auto"), SUNSET("Sunset"), LIGHT("Light"), DARK("Dark") }
 
 /**
  * Which flights the boards show. There is no cargo-only filter: passenger flights carry
@@ -25,6 +30,8 @@ data class Settings(
     /** Ramp wind alerts: caution from this gust, high-wind from this wind or gust. */
     val gustCautionKt: Int = 25,
     val highWindKt: Int = 35,
+    /** For the heat-strain heart-rate limit (180 minus age); 0 when not given. */
+    val age: Int = 0,
 )
 
 class SettingsStore(context: Context) {
@@ -43,6 +50,7 @@ class SettingsStore(context: Context) {
             .putString("filter", next.filter.name)
             .putInt("gustCautionKt", next.gustCautionKt)
             .putInt("highWindKt", next.highWindKt)
+            .putInt("age", next.age)
             .apply()
     }
 
@@ -56,6 +64,7 @@ class SettingsStore(context: Context) {
             filter = enumOr(prefs.getString("filter", null), d.filter),
             gustCautionKt = prefs.getInt("gustCautionKt", d.gustCautionKt),
             highWindKt = prefs.getInt("highWindKt", d.highWindKt),
+            age = prefs.getInt("age", d.age),
         )
     }
 

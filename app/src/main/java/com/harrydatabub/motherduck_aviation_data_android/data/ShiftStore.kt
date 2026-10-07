@@ -15,10 +15,33 @@ data class Shift(
     val endedAt: Long? = null,
     /** Water logged in the app this shift. */
     val waterMl: Double = 0.0,
+    /** When breaks were logged with the Break button. */
+    val breaks: List<Long> = emptyList(),
+    /** Kept when the shift ends. */
+    val summary: ShiftSummary? = null,
 ) {
     val isActive get() = endedAt == null
     fun durationMs(now: Long) = (endedAt ?: now) - startedAt
+    /** The last break, or the start: when the current stretch of work began. */
+    fun workingSince() = breaks.maxOrNull() ?: startedAt
 }
+
+/**
+ * How a shift went, kept with it when it ends: Health Connect's totals (null for types not
+ * allowed or with no data), water against the target, and breaks.
+ */
+data class ShiftSummary(
+    val steps: Long? = null,
+    val distanceKm: Double? = null,
+    val activeKcal: Double? = null,
+    val heartRateAverage: Long? = null,
+    val heartRateMax: Long? = null,
+    val waterMl: Double = 0.0,
+    val waterTargetMl: Double? = null,
+    val breaks: Int = 0,
+    val longestWithoutBreakMs: Long = 0,
+    val sleep24hMs: Long? = null,
+)
 
 data class HandoverNote(
     val id: String,
@@ -50,8 +73,13 @@ class ShiftStore(dir: File) {
     }
 
     @Synchronized
-    fun endShift(now: Long = System.currentTimeMillis()) = update { r ->
-        r.copy(shifts = r.shifts.map { if (it.isActive) it.copy(endedAt = now) else it })
+    fun endShift(now: Long = System.currentTimeMillis(), summary: ShiftSummary? = null) = update { r ->
+        r.copy(shifts = r.shifts.map { if (it.isActive) it.copy(endedAt = now, summary = summary) else it })
+    }
+
+    @Synchronized
+    fun logBreak(now: Long = System.currentTimeMillis()) = update { r ->
+        r.copy(shifts = r.shifts.map { if (it.isActive) it.copy(breaks = it.breaks + now) else it })
     }
 
     @Synchronized
@@ -94,6 +122,8 @@ class ShiftStore(dir: File) {
             .put("shifts", JSONArray(r.shifts.take(KEEP_SHIFTS).map { s ->
                 JSONObject().put("id", s.id).put("airport", s.airportIcao).put("startedAt", s.startedAt)
                     .put("endedAt", s.endedAt ?: JSONObject.NULL).put("waterMl", s.waterMl)
+                    .put("breaks", JSONArray(s.breaks))
+                    .put("summary", s.summary?.let(::encodeSummary) ?: JSONObject.NULL)
             }))
             .put("notes", JSONArray((r.notes.filter { it.resolvedAt == null } +
                 r.notes.filter { it.resolvedAt != null }.take(KEEP_RESOLVED_NOTES)).map { n ->
@@ -102,6 +132,26 @@ class ShiftStore(dir: File) {
                     .put("resolvedAt", n.resolvedAt ?: JSONObject.NULL)
             }))
 
+        private fun encodeSummary(m: ShiftSummary): JSONObject = JSONObject()
+            .put("steps", m.steps ?: JSONObject.NULL).put("distanceKm", m.distanceKm ?: JSONObject.NULL)
+            .put("activeKcal", m.activeKcal ?: JSONObject.NULL)
+            .put("heartRateAverage", m.heartRateAverage ?: JSONObject.NULL).put("heartRateMax", m.heartRateMax ?: JSONObject.NULL)
+            .put("waterMl", m.waterMl).put("waterTargetMl", m.waterTargetMl ?: JSONObject.NULL)
+            .put("breaks", m.breaks).put("longestWithoutBreakMs", m.longestWithoutBreakMs)
+            .put("sleep24hMs", m.sleep24hMs ?: JSONObject.NULL)
+
+        private fun decodeSummary(o: JSONObject): ShiftSummary {
+            fun long(k: String) = if (o.isNull(k)) null else o.getLong(k)
+            fun double(k: String) = if (o.isNull(k)) null else o.getDouble(k)
+            return ShiftSummary(
+                steps = long("steps"), distanceKm = double("distanceKm"), activeKcal = double("activeKcal"),
+                heartRateAverage = long("heartRateAverage"), heartRateMax = long("heartRateMax"),
+                waterMl = o.optDouble("waterMl", 0.0), waterTargetMl = double("waterTargetMl"),
+                breaks = o.optInt("breaks"), longestWithoutBreakMs = o.optLong("longestWithoutBreakMs"),
+                sleep24hMs = long("sleep24hMs"),
+            )
+        }
+
         fun decode(o: JSONObject): CrewRecords {
             fun JSONObject.optLongOrNull(k: String) = if (isNull(k)) null else getLong(k)
             val shifts = o.optJSONArray("shifts") ?: JSONArray()
@@ -109,7 +159,13 @@ class ShiftStore(dir: File) {
             return CrewRecords(
                 shifts = (0 until shifts.length()).map { i ->
                     val s = shifts.getJSONObject(i)
-                    Shift(s.getString("id"), s.getString("airport"), s.getLong("startedAt"), s.optLongOrNull("endedAt"), s.optDouble("waterMl", 0.0))
+                    val breaks = s.optJSONArray("breaks") ?: JSONArray()
+                    Shift(
+                        s.getString("id"), s.getString("airport"), s.getLong("startedAt"), s.optLongOrNull("endedAt"),
+                        s.optDouble("waterMl", 0.0),
+                        breaks = (0 until breaks.length()).map { breaks.getLong(it) },
+                        summary = s.optJSONObject("summary")?.let(::decodeSummary),
+                    )
                 },
                 notes = (0 until notes.length()).map { i ->
                     val n = notes.getJSONObject(i)

@@ -52,9 +52,11 @@ import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.harrydatabub.motherduck_aviation_data_android.data.FlightFilter
 import com.harrydatabub.motherduck_aviation_data_android.domain.Dir
+import com.harrydatabub.motherduck_aviation_data_android.domain.Solar
 import com.harrydatabub.motherduck_aviation_data_android.ui.components.FreshnessBanner
 import com.harrydatabub.motherduck_aviation_data_android.ui.components.rememberNow
-import com.harrydatabub.motherduck_aviation_data_android.ui.map.MapScreen
+import com.harrydatabub.motherduck_aviation_data_android.ui.map.MapMode
+import com.harrydatabub.motherduck_aviation_data_android.ui.map.MapTab
 import com.harrydatabub.motherduck_aviation_data_android.ui.screens.AirportPickerSheet
 import com.harrydatabub.motherduck_aviation_data_android.ui.screens.BriefingScreen
 import com.harrydatabub.motherduck_aviation_data_android.ui.screens.BriefingTab
@@ -65,20 +67,23 @@ import com.harrydatabub.motherduck_aviation_data_android.ui.screens.SettingsShee
 import com.harrydatabub.motherduck_aviation_data_android.ui.screens.ShiftScreen
 import com.harrydatabub.motherduck_aviation_data_android.ui.theme.RampTheme
 
-/** Bottom-bar destinations, plus the map, which opens from Now and from a flight. */
-enum class Screen(val label: String, val icon: ImageVector, val inBar: Boolean = true) {
+/** Bottom-bar destinations. The map also opens from Now and from a flight, on the airspace. */
+enum class Screen(val label: String, val icon: ImageVector) {
     NOW("Now", Icons.Filled.Dashboard),
     ARRIVALS("Arrivals", Icons.Filled.FlightLand),
     DEPARTURES("Departures", Icons.Filled.FlightTakeoff),
+    MAP("Map", Icons.Filled.Map),
     BRIEFING("Briefing", Icons.Filled.Cloud),
     SHIFT("Shift", Icons.Filled.HealthAndSafety),
-    MAP("Map", Icons.Filled.Map, inBar = false),
 }
 
 @Composable
-fun AppRoot(vm: AppViewModel, shiftVm: ShiftViewModel) {
+fun AppRoot(vm: AppViewModel, shiftVm: ShiftViewModel, mapVm: MapViewModel) {
     val state by vm.state.collectAsStateWithLifecycle()
-    RampTheme(state.settings.theme) {
+    val minute by rememberNow(60_000)
+    val airport = state.snapshot?.airport
+    val sunDark = airport?.let { Solar.isDark(it.lat, it.lon, minute) }
+    RampTheme(state.settings.theme, sunDark) {
         // Poll the API only while the app is visible.
         LifecycleStartEffect(vm) {
             vm.onForeground()
@@ -89,18 +94,19 @@ fun AppRoot(vm: AppViewModel, shiftVm: ShiftViewModel) {
             view.keepScreenOn = state.settings.keepScreenOn
             onDispose { view.keepScreenOn = false }
         }
-        Content(state, vm, shiftVm)
+        Content(state, vm, shiftVm, mapVm)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel) {
+private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel, mapVm: MapViewModel) {
     val records by shiftVm.records.collectAsStateWithLifecycle()
     val health by shiftVm.healthState.collectAsStateWithLifecycle()
     var screen by rememberSaveable { mutableStateOf(Screen.NOW) }
     var briefingTab by rememberSaveable { mutableStateOf(BriefingTab.WEATHER) }
     var mapSelection by rememberSaveable { mutableStateOf<String?>(null) }
+    var mapMode by rememberSaveable { mutableStateOf(MapMode.AIRPORT) }
     var picking by rememberSaveable { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var detail by remember { mutableStateOf<FlightItem?>(null) }
@@ -145,12 +151,13 @@ private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel) {
         },
         bottomBar = {
             NavigationBar {
-                Screen.entries.filter { it.inBar }.forEach { s ->
+                Screen.entries.forEach { s ->
                     NavigationBarItem(
                         selected = screen == s,
                         onClick = { screen = s },
                         icon = { Icon(s.icon, contentDescription = null) },
-                        label = { Text(s.label, maxLines = 1) },
+                        // Six tabs: the smaller label keeps "Departures" whole on a phone.
+                        label = { Text(s.label, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelSmall) },
                     )
                 }
             }
@@ -170,7 +177,7 @@ private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel) {
                             onSeeDepartures = { screen = Screen.DEPARTURES },
                             onSeeWeather = { briefingTab = BriefingTab.WEATHER; screen = Screen.BRIEFING },
                             onSeeNotams = { briefingTab = BriefingTab.NOTAMS; screen = Screen.BRIEFING },
-                            onOpenMap = { screen = Screen.MAP },
+                            onOpenMap = { mapMode = MapMode.AIRSPACE; screen = Screen.MAP },
                         )
                         Screen.ARRIVALS, Screen.DEPARTURES -> FlightsScreen(
                             if (screen == Screen.ARRIVALS) Dir.INBOUND else Dir.OUTBOUND,
@@ -180,12 +187,15 @@ private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel) {
                             onFlight = { detail = it },
                             onRefresh = vm::refreshAll,
                         )
-                        Screen.MAP -> MapScreen(state, mapSelection, onSelect = { mapSelection = it }, onDetails = { detail = it })
+                        Screen.MAP -> MapTab(
+                            state, mapVm, mapMode, onMode = { mapMode = it },
+                            selectedAircraft = mapSelection, onSelectAircraft = { mapSelection = it }, onDetails = { detail = it },
+                        )
                         Screen.BRIEFING -> BriefingScreen(
                             state, now, briefingTab, onTab = { briefingTab = it },
                             onSelectAirport = vm::selectAirport,
                         )
-                        Screen.SHIFT -> ShiftScreen(shiftVm, records, health, snap, now)
+                        Screen.SHIFT -> ShiftScreen(shiftVm, records, health, snap, now, state.settings.age)
                     }
                 }
             }
@@ -200,7 +210,7 @@ private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel) {
         )
     }
     if (showSettings) {
-        SettingsSheet(state.settings, state.myAirlines, onChange = vm::updateSettings, onDismiss = {
+        SettingsSheet(state.settings, state.myAirlines, snap?.airport, onChange = vm::updateSettings, onDismiss = {
             showSettings = false
             // Configuring "my airlines" from the filter chip: switch to it once set.
             if (state.settings.filter != FlightFilter.MINE && state.myAirlines.isNotEmpty() && screen in setOf(Screen.ARRIVALS, Screen.DEPARTURES)) {
@@ -214,6 +224,7 @@ private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel) {
             d, snap, now,
             onShowOnMap = { icao24 ->
                 mapSelection = icao24
+                mapMode = MapMode.AIRSPACE
                 screen = Screen.MAP
                 detail = null
             },

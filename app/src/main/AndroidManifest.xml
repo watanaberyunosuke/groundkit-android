@@ -3,6 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Your position on the maps, and routes from it, while a map is on screen. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <!-- Health Connect, for the Shift tab. Keep in step with HealthService.PERMISSIONS. -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
@@ -11,6 +14,8 @@
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
     <uses-permission android:name="android.permission.health.READ_HYDRATION" />
     <uses-permission android:name="android.permission.health.WRITE_HYDRATION" />
+    <!-- Sleep before a shift, for the fatigue check. -->
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
 
     <queries>
         <package android:name="com.google.android.apps.healthdata" />

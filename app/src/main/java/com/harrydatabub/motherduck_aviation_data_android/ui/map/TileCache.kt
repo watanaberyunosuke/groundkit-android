@@ -65,7 +65,9 @@ class TileCache(private val scope: CoroutineScope) {
         return null
     }
 
-    private companion object {
-        const val RETRY_MS = 30_000L
+    companion object {
+        private const val RETRY_MS = 30_000L
+        /** Esri's grey canvas has tiles to level 16. */
+        const val MAX_LEVEL = 16
     }
 }

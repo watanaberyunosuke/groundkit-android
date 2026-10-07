@@ -8,6 +8,14 @@ import com.harrydatabub.motherduck_aviation_data_android.data.HealthAvailability
 import com.harrydatabub.motherduck_aviation_data_android.data.HealthService
 import com.harrydatabub.motherduck_aviation_data_android.data.ShiftStats
 import com.harrydatabub.motherduck_aviation_data_android.data.ShiftStore
+import com.harrydatabub.motherduck_aviation_data_android.data.ShiftSummary
+import com.harrydatabub.motherduck_aviation_data_android.domain.DAY_MS
+import com.harrydatabub.motherduck_aviation_data_android.domain.Fatigue
+import com.harrydatabub.motherduck_aviation_data_android.domain.HOUR_MS
+import com.harrydatabub.motherduck_aviation_data_android.domain.HeatStrain
+import com.harrydatabub.motherduck_aviation_data_android.domain.MINUTE_MS
+import com.harrydatabub.motherduck_aviation_data_android.domain.ShiftAdvice
+import com.harrydatabub.motherduck_aviation_data_android.domain.SleepSpan
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +30,10 @@ data class HealthState(
     val availability: HealthAvailability = HealthAvailability.UNAVAILABLE,
     val granted: Set<String> = emptySet(),
     val stats: ShiftStats = ShiftStats(),
+    /** Sleep in the 48 h before the shift (or now); null when sleep is not allowed. */
+    val sleep: List<SleepSpan>? = null,
+    /** Heart rate over the last few minutes, for the heat-strain check. */
+    val recentHeartRate: List<HeatStrain.Sample> = emptyList(),
     val error: String? = null,
 ) {
     val connected get() = granted.isNotEmpty()
@@ -48,7 +60,31 @@ class ShiftViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { refreshHealth() }
     }
 
-    fun endShift() = store.endShift()
+    /** Ends the shift and keeps a summary of it, with Health Connect's latest totals. */
+    fun endShift(feelsLikeC: Double?) {
+        val shift = records.value.activeShift ?: return
+        val now = System.currentTimeMillis()
+        viewModelScope.launch {
+            refreshHealth()
+            val h = _health.value
+            val stats = h.stats
+            val water = maxOf(shift.waterMl, stats.waterMl ?: 0.0)
+            val summary = ShiftSummary(
+                steps = stats.steps, distanceKm = stats.distanceKm, activeKcal = stats.activeKcal,
+                heartRateAverage = stats.heartRateAverage, heartRateMax = stats.heartRateMax,
+                waterMl = water,
+                waterTargetMl = ShiftAdvice.waterTargetMl(feelsLikeC, shift.durationMs(now) / HOUR_MS.toDouble()),
+                breaks = shift.breaks.size,
+                longestWithoutBreakMs = ShiftAdvice.longestStretchMs(shift.startedAt, shift.breaks, now),
+                // Through assess, so no sleep recorded stays unknown rather than none.
+                sleep24hMs = Fatigue.assess(h.sleep, emptyList(), shift.startedAt, now).sleep24hMs,
+            )
+            store.endShift(now, summary)
+            refreshHealth()
+        }
+    }
+
+    fun logBreak() = store.logBreak()
 
     /** Logs a drink here, and in Health Connect when allowed. */
     fun logWater(ml: Double) {
@@ -88,20 +124,32 @@ class ShiftViewModel(app: Application) : AndroidViewModel(app) {
         val availability = health.availability
         val granted = if (availability == HealthAvailability.AVAILABLE) health.grantedPermissions() else emptySet()
         val shift = records.value.activeShift
+        val now = Instant.now()
         val stats = runCatching {
             if (shift != null && granted.isNotEmpty()) health.read(Instant.ofEpochMilli(shift.startedAt)) else ShiftStats()
         }
+        // Sleep is read off shift too, as a check before starting one.
+        val dutyStart = shift?.let { Instant.ofEpochMilli(it.startedAt) } ?: now
+        val sleep = runCatching { if (granted.isNotEmpty()) health.sleep(dutyStart.minusMillis(2 * DAY_MS)) else null }
+        val heart = runCatching {
+            if (shift != null && granted.isNotEmpty()) health.heartRateSamples(now.minusMillis(HEART_WINDOW_MS)) else emptyList()
+        }
+        val error = listOf(stats, sleep, heart).firstNotNullOfOrNull { it.exceptionOrNull() }
         _health.update {
             it.copy(
                 availability = availability,
                 granted = granted,
                 stats = stats.getOrDefault(it.stats),
-                error = stats.exceptionOrNull()?.let { e -> e.message ?: e.javaClass.simpleName },
+                sleep = sleep.getOrDefault(it.sleep),
+                recentHeartRate = heart.getOrDefault(it.recentHeartRate),
+                error = error?.let { e -> e.message ?: e.javaClass.simpleName },
             )
         }
     }
 
     private companion object {
         const val POLL_MS = 120_000L
+        /** Heart rate kept for the heat-strain check: its 5 minutes plus a margin. */
+        const val HEART_WINDOW_MS = 10 * MINUTE_MS
     }
 }

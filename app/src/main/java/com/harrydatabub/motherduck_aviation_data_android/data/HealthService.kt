@@ -10,12 +10,15 @@ import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.Volume
+import com.harrydatabub.motherduck_aviation_data_android.domain.HeatStrain
+import com.harrydatabub.motherduck_aviation_data_android.domain.SleepSpan
 import java.time.Instant
 import java.time.ZoneId
 
@@ -30,6 +33,7 @@ data class ShiftStats(
     val activeKcal: Double? = null,
     val heartRateLatest: Long? = null,
     val heartRateAverage: Long? = null,
+    val heartRateMax: Long? = null,
     val waterMl: Double? = null,
 )
 
@@ -73,7 +77,10 @@ class HealthService(private val context: Context) {
             if (READ_STEPS in granted) add(StepsRecord.COUNT_TOTAL)
             if (READ_DISTANCE in granted) add(DistanceRecord.DISTANCE_TOTAL)
             if (READ_ACTIVE_ENERGY in granted) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
-            if (READ_HEART_RATE in granted) add(HeartRateRecord.BPM_AVG)
+            if (READ_HEART_RATE in granted) {
+                add(HeartRateRecord.BPM_AVG)
+                add(HeartRateRecord.BPM_MAX)
+            }
             if (READ_WATER in granted) add(HydrationRecord.VOLUME_TOTAL)
         }
         if (metrics.isEmpty()) return ShiftStats()
@@ -88,8 +95,47 @@ class HealthService(private val context: Context) {
             activeKcal = totals[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories,
             heartRateLatest = latestBpm,
             heartRateAverage = totals[HeartRateRecord.BPM_AVG],
+            heartRateMax = totals[HeartRateRecord.BPM_MAX],
             waterMl = totals[HydrationRecord.VOLUME_TOTAL]?.inMilliliters,
         )
+    }
+
+    /**
+     * Sleep sessions overlapping [from, now], less any time marked awake or out of bed
+     * within them. Null when sleep is not allowed, so "no data" and "no sleep" differ.
+     */
+    suspend fun sleep(from: Instant): List<SleepSpan>? {
+        val c = client ?: return null
+        if (READ_SLEEP !in grantedPermissions()) return null
+        // A session that began before `from` still counts for the part after it.
+        val window = TimeRangeFilter.after(from.minusSeconds(SLEEP_LOOKBACK_S))
+        val awake = setOf(
+            SleepSessionRecord.STAGE_TYPE_AWAKE, SleepSessionRecord.STAGE_TYPE_OUT_OF_BED,
+            SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED,
+        )
+        return c.readRecords(ReadRecordsRequest(SleepSessionRecord::class, window)).records.flatMap { r ->
+            val start = r.startTime.toEpochMilli()
+            val end = r.endTime.toEpochMilli()
+            // Split the session around its awake stages.
+            val gaps = r.stages.filter { it.stage in awake }.map { it.startTime.toEpochMilli() to it.endTime.toEpochMilli() }.sortedBy { it.first }
+            var cursor = start
+            buildList {
+                for ((a, b) in gaps) {
+                    if (a > cursor) add(SleepSpan(cursor, minOf(a, end)))
+                    cursor = maxOf(cursor, b)
+                }
+                if (end > cursor) add(SleepSpan(cursor, end))
+            }
+        }.filter { it.end > from.toEpochMilli() }
+    }
+
+    /** Heart-rate samples since `from`, for the heat-strain check. Empty when not allowed. */
+    suspend fun heartRateSamples(from: Instant): List<HeatStrain.Sample> {
+        val c = client ?: return emptyList()
+        if (READ_HEART_RATE !in grantedPermissions()) return emptyList()
+        return c.readRecords(ReadRecordsRequest(HeartRateRecord::class, TimeRangeFilter.after(from))).records
+            .flatMap { r -> r.samples.map { HeatStrain.Sample(it.time.toEpochMilli(), it.beatsPerMinute) } }
+            .filter { it.at >= from.toEpochMilli() }
     }
 
     /** Saves a drink to Health Connect. False when unavailable or not allowed. */
@@ -120,8 +166,12 @@ class HealthService(private val context: Context) {
         val READ_HEART_RATE = HealthPermission.getReadPermission(HeartRateRecord::class)
         val READ_WATER = HealthPermission.getReadPermission(HydrationRecord::class)
         val WRITE_WATER = HealthPermission.getWritePermission(HydrationRecord::class)
+        val READ_SLEEP = HealthPermission.getReadPermission(SleepSessionRecord::class)
 
         /** Must match the health permissions declared in AndroidManifest.xml. */
-        val PERMISSIONS = setOf(READ_STEPS, READ_DISTANCE, READ_ACTIVE_ENERGY, READ_HEART_RATE, READ_WATER, WRITE_WATER)
+        val PERMISSIONS = setOf(READ_STEPS, READ_DISTANCE, READ_ACTIVE_ENERGY, READ_HEART_RATE, READ_WATER, WRITE_WATER, READ_SLEEP)
+
+        /** Longest sleep session looked back for, so one that started before the window counts. */
+        private const val SLEEP_LOOKBACK_S = 16 * 3600L
     }
 }
