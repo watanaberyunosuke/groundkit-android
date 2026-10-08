@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.HealthAndSafety
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
@@ -158,6 +159,10 @@ private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel, m
                         IconButton(onClick = vm::refreshAll, modifier = Modifier.size(52.dp)) {
                             Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
                         }
+                    }
+                    // The map from any tab, like the map button in the iOS app's toolbar.
+                    IconButton(onClick = { page = Page.MAP }, modifier = Modifier.size(52.dp)) {
+                        Icon(Icons.Filled.Map, contentDescription = "Map")
                     }
                     IconButton(onClick = { showSettings = true }, modifier = Modifier.size(52.dp)) {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
