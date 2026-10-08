@@ -627,7 +627,7 @@ private class LayoutStyle(
             holding = Color(0xFFF87171), jetBridge = Color(0xFF6B7280), gate = Color(0xFF93C5FD),
             serviceRoad = Color(0xFFFB923C), road = Color(0xFF6B7280),
             route = Color(0xFF60A5FA), selected = Color(0xFFF87171),
-            label = Color(0xFFE5E7EB), labelHalo = Color(0xCC0E1013),
+            label = Color(0xFFE5E7EB), labelHalo = Color(0xCC121417),
         ) else LayoutStyle(
             apron = Color(0xFFDDE1E6), apronEdge = Color(0xFFC3C8CF),
             terminal = Color(0xFFBFDBFE), terminalEdge = Color(0xFF1D4ED8),

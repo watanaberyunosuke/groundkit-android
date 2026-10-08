@@ -76,6 +76,7 @@ import com.harrydatahub.groundkit.ui.components.EmptyState
 import com.harrydatahub.groundkit.ui.components.InfoTile
 import com.harrydatahub.groundkit.ui.components.SectionCard
 import com.harrydatahub.groundkit.ui.theme.LocalStatusColors
+import com.harrydatahub.groundkit.ui.theme.readableContent
 import java.time.ZoneId
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -387,7 +388,7 @@ private fun WaterCard(shift: Shift, now: Long, feelsLike: Double?, healthMl: Dou
                         haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                     },
                     modifier = Modifier.weight(1f).height(60.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = blue, contentColor = Color.White),
+                    colors = ButtonDefaults.buttonColors(containerColor = blue, contentColor = blue.readableContent()),
                 ) {
                     Icon(Icons.Filled.WaterDrop, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
@@ -543,7 +544,7 @@ private fun BigButton(label: String, icon: ImageVector, tint: Color, onClick: ()
     Button(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().height(60.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = tint, contentColor = Color.White),
+        colors = ButtonDefaults.buttonColors(containerColor = tint, contentColor = tint.readableContent()),
     ) {
         Icon(icon, contentDescription = null)
         Spacer(Modifier.width(8.dp))
