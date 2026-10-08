@@ -15,7 +15,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.LocalParking
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -64,7 +67,9 @@ fun NowScreen(
     onSeeDepartures: () -> Unit,
     onSeeWeather: () -> Unit,
     onSeeNotams: () -> Unit,
+    onOpenAirportMap: () -> Unit,
     onOpenMap: () -> Unit,
+    onOpenBriefing: () -> Unit,
 ) {
     val snap = state.snapshot ?: return
     val traffic = state.traffic
@@ -91,7 +96,13 @@ fun NowScreen(
             items(state.alerts) { AlertCard(it) }
         }
         item { WeatherGlance(snap, now, onSeeWeather) }
-        item { MapLink(state, onOpenMap) }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PageLink(Icons.Filled.LocalParking, "Airport map: stands, gates, routes", onOpenAirportMap)
+                PageLink(Icons.Filled.Map, "Airspace map" + (state.traffic?.placed?.size?.let { " · $it aircraft" } ?: ""), onOpenMap)
+                PageLink(Icons.Filled.Cloud, "Briefing: METAR, TAF, NOTAMs, traffic", onOpenBriefing)
+            }
+        }
         item {
             NextFlights(
                 "Next arrivals", filterNote, nextArrivals, snap, now, state.live.error, onFlight, onSeeArrivals,
@@ -203,16 +214,13 @@ private fun NextFlights(
     }
 }
 
+/** Opens the Map or Briefing page, which are not tabs. */
 @Composable
-private fun MapLink(state: UiState, onOpenMap: () -> Unit) {
-    val count = state.traffic?.placed?.size
-    OutlinedButton(onClick = onOpenMap, modifier = Modifier.fillMaxWidth().height(60.dp)) {
-        Icon(Icons.Filled.Map, contentDescription = null)
+private fun PageLink(icon: ImageVector, label: String, onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth().height(60.dp)) {
+        Icon(icon, contentDescription = null)
         Spacer(Modifier.width(10.dp))
-        Text(
-            "Airspace map" + (count?.let { " · $it aircraft" } ?: ""),
-            style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f),
-        )
+        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
         Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
     }
 }

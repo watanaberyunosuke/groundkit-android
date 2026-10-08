@@ -62,9 +62,11 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -152,11 +154,19 @@ private fun TurnaroundList(vm: TurnaroundViewModel, here: List<Turnaround>, snap
                 item {
                     EmptyState(
                         if (showClosed) "Closed turnarounds at ${snap.airport.iata} appear here."
-                        else "No active turnarounds. Start one from a flight on Arrivals or Departures, or add one.",
+                        else "No active turnarounds. Start one from a flight on the Flights tab, or add one.",
                     )
                 }
             }
-            items(shown, key = { it.id }) { t -> TurnaroundRow(t, snap.zone, now) { onOpen(t.id) } }
+            // Swipe a row away to delete it, as on iOS.
+            items(shown, key = { it.id }) { t ->
+                SwipeToDismissBox(
+                    rememberSwipeToDismissBoxState(),
+                    backgroundContent = { DeleteBackground() },
+                    enableDismissFromStartToEnd = false,
+                    onDismiss = { vm.delete(t.id) },
+                ) { TurnaroundRow(t, snap.zone, now) { onOpen(t.id) } }
+            }
             item {
                 Text(
                     "Turnarounds are kept on this device. Local procedures and the load controller take precedence.",
@@ -170,6 +180,19 @@ private fun TurnaroundList(vm: TurnaroundViewModel, here: List<Turnaround>, snap
             creating = false
             onOpen(vm.create(t))
         }
+    }
+}
+
+@Composable
+private fun DeleteBackground() {
+    val red = LocalStatusColors.current.red
+    Row(
+        Modifier.fillMaxSize().background(red, RoundedCornerShape(12.dp)).padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Delete", color = red.readableContent(), style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.width(8.dp))
+        Icon(Icons.Filled.Delete, contentDescription = null, tint = red.readableContent())
     }
 }
 
@@ -329,9 +352,7 @@ private fun TurnaroundDetail(vm: TurnaroundViewModel, t: Turnaround, zone: ZoneI
                     Text("Reopen turnaround", style = MaterialTheme.typography.titleMedium)
                 }
             } else {
-                BigButton("Close turnaround", Icons.Filled.Flag, s.green) {
-                    if (next == null) vm.close(t.id) else confirmClose = true
-                }
+                BigButton("Close turnaround", Icons.Filled.Flag, s.green) { confirmClose = true }
             }
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
@@ -348,8 +369,8 @@ private fun TurnaroundDetail(vm: TurnaroundViewModel, t: Turnaround, zone: ZoneI
             undoStep = null
         }
     }
-    if (confirmClose && next != null) {
-        Confirm("Close this turnaround?", "${next.title} and later steps are not marked done.", "Close", s.green, onDismiss = { confirmClose = false }) {
+    if (confirmClose) {
+        Confirm("Close this turnaround?", next?.let { "${it.title} and later steps are not marked done." }, "Close turnaround", s.green, onDismiss = { confirmClose = false }) {
             vm.close(t.id)
             confirmClose = false
         }
