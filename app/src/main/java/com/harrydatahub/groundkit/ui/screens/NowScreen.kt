@@ -2,6 +2,7 @@ package com.harrydatahub.groundkit.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,23 +11,30 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.LocalParking
+import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -34,9 +42,9 @@ import com.harrydatahub.groundkit.data.FlightFilter
 import com.harrydatahub.groundkit.data.Notam
 import com.harrydatahub.groundkit.domain.AirportSnapshot
 import com.harrydatahub.groundkit.domain.Placement
-import com.harrydatahub.groundkit.domain.windText
-import com.harrydatahub.groundkit.domain.visText
 import com.harrydatahub.groundkit.domain.ceilingText
+import com.harrydatahub.groundkit.domain.visText
+import com.harrydatahub.groundkit.domain.windText
 import com.harrydatahub.groundkit.ui.FlightBoards
 import com.harrydatahub.groundkit.ui.FlightItem
 import com.harrydatahub.groundkit.ui.Fmt
@@ -49,6 +57,7 @@ import com.harrydatahub.groundkit.ui.components.NoAlertsCard
 import com.harrydatahub.groundkit.ui.components.SectionCard
 import com.harrydatahub.groundkit.ui.components.TileRow
 import com.harrydatahub.groundkit.ui.components.WindCompass
+import com.harrydatahub.groundkit.ui.map.MapScreen
 import java.time.ZoneOffset
 import kotlin.math.roundToInt
 
@@ -64,7 +73,9 @@ fun NowScreen(
     onSeeDepartures: () -> Unit,
     onSeeWeather: () -> Unit,
     onSeeNotams: () -> Unit,
+    onOpenAirportMap: () -> Unit,
     onOpenMap: () -> Unit,
+    onOpenBriefing: () -> Unit,
 ) {
     val snap = state.snapshot ?: return
     val traffic = state.traffic
@@ -91,7 +102,13 @@ fun NowScreen(
             items(state.alerts) { AlertCard(it) }
         }
         item { WeatherGlance(snap, now, onSeeWeather) }
-        item { MapLink(state, onOpenMap) }
+        item { MapPreview(state, onOpenMap) }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PageLink(Icons.Filled.LocalParking, "Airport map: stands, gates, routes", onOpenAirportMap)
+                PageLink(Icons.Filled.Cloud, "Briefing: METAR, TAF, NOTAMs, traffic", onOpenBriefing)
+            }
+        }
         item {
             NextFlights(
                 "Next arrivals", filterNote, nextArrivals, snap, now, state.live.error, onFlight, onSeeArrivals,
@@ -203,16 +220,48 @@ private fun NextFlights(
     }
 }
 
+/** The airspace as a still picture, as on iOS; tap for the full map. */
 @Composable
-private fun MapLink(state: UiState, onOpenMap: () -> Unit) {
-    val count = state.traffic?.placed?.size
-    OutlinedButton(onClick = onOpenMap, modifier = Modifier.fillMaxWidth().height(60.dp)) {
-        Icon(Icons.Filled.Map, contentDescription = null)
-        Spacer(Modifier.width(10.dp))
+private fun MapPreview(state: UiState, onOpen: () -> Unit) {
+    val placed = state.traffic?.placed.orEmpty()
+    val inbound = placed.count { it.placement == Placement.INBOUND }
+    val outbound = placed.count { it.placement == Placement.OUTBOUND }
+    Column {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(240.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .clickable(onClickLabel = "Open the full map", onClick = onOpen),
+        ) {
+            MapScreen(state, selected = null, onSelect = {}, onDetails = {}, preview = true)
+            Surface(
+                Modifier.align(Alignment.TopEnd).padding(8.dp),
+                shape = RoundedCornerShape(50),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.93f),
+            ) {
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.OpenInFull, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Full map", style = MaterialTheme.typography.titleSmall)
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
         Text(
-            "Airspace map" + (count?.let { " · $it aircraft" } ?: ""),
-            style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f),
+            "$inbound inbound · $outbound outbound within 500 NM",
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/** Opens the airport map or the briefing, which are not tabs. */
+@Composable
+private fun PageLink(icon: ImageVector, label: String, onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth().height(60.dp)) {
+        Icon(icon, contentDescription = null)
+        Spacer(Modifier.width(10.dp))
+        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
         Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
     }
 }

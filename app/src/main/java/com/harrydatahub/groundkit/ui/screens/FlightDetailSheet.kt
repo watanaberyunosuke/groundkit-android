@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -19,6 +20,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -40,6 +42,7 @@ fun FlightDetailSheet(
     snap: AirportSnapshot,
     now: Long,
     onShowOnMap: (String) -> Unit,
+    onStartTurnaround: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val zone = snap.zone
@@ -115,6 +118,14 @@ fun FlightDetailSheet(
                     Icon(Icons.Filled.Map, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Show on map")
+                }
+            }
+            if (item.recognised) {
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(onClick = onStartTurnaround, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                    Icon(Icons.Filled.Checklist, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Start turnaround")
                 }
             }
             Spacer(Modifier.height(12.dp))

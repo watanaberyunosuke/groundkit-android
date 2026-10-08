@@ -114,6 +114,8 @@ fun MapScreen(
     onSelect: (String?) -> Unit,
     onDetails: (FlightItem) -> Unit,
     me: MyFix? = null,
+    /** A still picture for the Now screen: no gestures, controls or legend. */
+    preview: Boolean = false,
 ) {
     val snap = state.snapshot ?: return
     val traffic = state.traffic
@@ -155,7 +157,7 @@ fun MapScreen(
             Modifier
                 .fillMaxSize()
                 .semantics { contentDescription = "Map of live aircraft around ${snap.airport.iata}" }
-                .pointerInput(snap.airport.icao) {
+                .then(if (preview) Modifier else Modifier.pointerInput(snap.airport.icao) {
                     detectTransformGestures { centroid, pan, gestureZoom, _ ->
                         center -= pan / worldSize()
                         if (gestureZoom != 1f) zoomAround(centroid, gestureZoom)
@@ -172,7 +174,7 @@ fun MapScreen(
                             onSelect(hit?.first?.live?.icao24)
                         },
                     )
-                },
+                }),
         ) {
             canvasSize = size
             drawRect(status.mapBackground)
@@ -234,66 +236,69 @@ fun MapScreen(
             me?.let { drawMe(origin + mercator(it.lat, it.lon) * ws, 0f, it.bearingDeg, status.arrivalPath, status.halo) }
         }
 
-        // Zoom controls: large, thumb-sized.
-        Column(
-            Modifier
-                .align(Alignment.TopStart)
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            MapButton(Icons.Filled.Add, "Zoom in") { zoomAround(Offset(canvasSize.width / 2, canvasSize.height / 2), 2f) }
-            MapButton(Icons.Filled.Remove, "Zoom out") { zoomAround(Offset(canvasSize.width / 2, canvasSize.height / 2), 0.5f) }
-            MapButton(Icons.Filled.MyLocation, "Centre on ${snap.airport.iata}") {
-                center = home
-                zoom = DEFAULT_ZOOM
-            }
-        }
-
-        // Weather and legend, top right.
-        Surface(
-            Modifier
-                .align(Alignment.TopEnd)
-                .padding(12.dp),
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.93f),
-            shadowElevation = 2.dp,
-        ) {
-            Column(Modifier.padding(10.dp)) {
-                snap.conditions?.takeIf { it.metarRaw != null }?.let { c ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(snap.airport.iata, style = MaterialTheme.typography.titleSmall)
-                        Spacer(Modifier.width(6.dp))
-                        c.flightCategory?.let { CategoryBadge(it) }
-                    }
-                    Text(windText(c), style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(6.dp))
+        // Controls, legend and the selected aircraft: not on the preview.
+        if (!preview) {
+            // Zoom controls: large, thumb-sized.
+            Column(
+                Modifier
+                    .align(Alignment.TopStart)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                MapButton(Icons.Filled.Add, "Zoom in") { zoomAround(Offset(canvasSize.width / 2, canvasSize.height / 2), 2f) }
+                MapButton(Icons.Filled.Remove, "Zoom out") { zoomAround(Offset(canvasSize.width / 2, canvasSize.height / 2), 0.5f) }
+                MapButton(Icons.Filled.MyLocation, "Centre on ${snap.airport.iata}") {
+                    center = home
+                    zoom = DEFAULT_ZOOM
                 }
-                Legend(status.green, "On time")
-                Legend(status.amber, "15–44 min late")
-                Legend(status.red, "45+ min late")
-                Legend(status.unknown, "No usual time")
-                Legend(status.otherTraffic, "Other traffic")
             }
-        }
 
-        // Selected aircraft, bottom.
-        val sel = traffic?.let { t -> selected?.let { FlightBoards.itemFor(it, snap, t) } }
-        if (sel != null) {
-            SelectedCard(sel, snap.airport.iata, onClose = { onSelect(null) }, onDetails = { onDetails(sel) }, modifier = Modifier.align(Alignment.BottomCenter))
-        } else {
-            val note = when {
-                state.live.error != null && traffic == null -> "Live positions unavailable: ${state.live.error}"
-                traffic == null -> "Loading live positions…"
-                else -> "${traffic.placed.size} aircraft · ${snap.tracks.size} observed paths · updated ${state.live.at?.let { Fmt.hm(it, snap.zone) } ?: "–"}"
-            }
+            // Weather and legend, top right.
             Surface(
                 Modifier
-                    .align(Alignment.BottomStart)
+                    .align(Alignment.TopEnd)
                     .padding(12.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.93f),
+                shadowElevation = 2.dp,
             ) {
-                Text(note, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                Column(Modifier.padding(10.dp)) {
+                    snap.conditions?.takeIf { it.metarRaw != null }?.let { c ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(snap.airport.iata, style = MaterialTheme.typography.titleSmall)
+                            Spacer(Modifier.width(6.dp))
+                            c.flightCategory?.let { CategoryBadge(it) }
+                        }
+                        Text(windText(c), style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(6.dp))
+                    }
+                    Legend(status.green, "On time")
+                    Legend(status.amber, "15–44 min late")
+                    Legend(status.red, "45+ min late")
+                    Legend(status.unknown, "No usual time")
+                    Legend(status.otherTraffic, "Other traffic")
+                }
+            }
+
+            // Selected aircraft, bottom.
+            val sel = traffic?.let { t -> selected?.let { FlightBoards.itemFor(it, snap, t) } }
+            if (sel != null) {
+                SelectedCard(sel, snap.airport.iata, onClose = { onSelect(null) }, onDetails = { onDetails(sel) }, modifier = Modifier.align(Alignment.BottomCenter))
+            } else {
+                val note = when {
+                    state.live.error != null && traffic == null -> "Live positions unavailable: ${state.live.error}"
+                    traffic == null -> "Loading live positions…"
+                    else -> "${traffic.placed.size} aircraft · ${snap.tracks.size} observed paths · updated ${state.live.at?.let { Fmt.hm(it, snap.zone) } ?: "–"}"
+                }
+                Surface(
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(12.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                ) {
+                    Text(note, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                }
             }
         }
         Text(
