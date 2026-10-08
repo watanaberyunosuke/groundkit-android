@@ -14,9 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.HealthAndSafety
@@ -56,6 +56,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.harrydatahub.groundkit.data.FlightFilter
@@ -84,8 +86,8 @@ enum class Screen(val label: String, val icon: ImageVector) {
     SHIFT("Shift", Icons.Filled.HealthAndSafety),
 }
 
-/** Full-screen pages opened from Now (and the map from a flight), over the tabs. */
-enum class Page(val title: String) { MAP("Map"), BRIEFING("Briefing") }
+/** Full-screen pop-ups opened from Now (and the map from a flight or the top bar), over the tabs. */
+enum class Page(val title: String) { MAP("Map"), BRIEFING("Briefing"), ARRIVALS("Arrivals"), DEPARTURES("Departures") }
 
 @Composable
 fun AppRoot(vm: AppViewModel, shiftVm: ShiftViewModel, mapVm: MapViewModel, turnVm: TurnaroundViewModel) {
@@ -126,10 +128,8 @@ private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel, m
     var detail by remember { mutableStateOf<FlightItem?>(null) }
     val now by rememberNow()
 
-    // Back closes a page, then goes to Now before leaving the app.
-    BackHandler(enabled = page != null || screen != Screen.NOW) {
-        if (page != null) page = null else screen = Screen.NOW
-    }
+    // Back goes to Now before leaving the app; a pop-up closes itself first.
+    BackHandler(enabled = screen != Screen.NOW) { screen = Screen.NOW }
     // Airborne arrivals on the Flights tab, as on iOS.
     val inbound = state.traffic?.boardLive?.count { it.dir == Dir.INBOUND && !it.onGround } ?: 0
 
@@ -196,25 +196,12 @@ private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel, m
                 when {
                     snap == null && state.loadError != null -> LoadFailed(state.loadError, vm::refreshAll)
                     snap == null -> Loading()
-                    page != null -> Column(Modifier.fillMaxSize()) {
-                        PageBar(page!!.title, onBack = { page = null })
-                        when (page!!) {
-                            Page.MAP -> MapTab(
-                                state, mapVm, mapMode, onMode = { mapMode = it },
-                                selectedAircraft = mapSelection, onSelectAircraft = { mapSelection = it }, onDetails = { detail = it },
-                            )
-                            Page.BRIEFING -> BriefingScreen(
-                                state, now, briefingTab, onTab = { briefingTab = it },
-                                onSelectAirport = vm::selectAirport,
-                            )
-                        }
-                    }
                     else -> when (screen) {
                         Screen.NOW -> NowScreen(
                             state, now,
                             onFlight = { detail = it },
-                            onSeeArrivals = { flightsDir = Dir.INBOUND; screen = Screen.FLIGHTS },
-                            onSeeDepartures = { flightsDir = Dir.OUTBOUND; screen = Screen.FLIGHTS },
+                            onSeeArrivals = { page = Page.ARRIVALS },
+                            onSeeDepartures = { page = Page.DEPARTURES },
                             onSeeWeather = { briefingTab = BriefingTab.WEATHER; page = Page.BRIEFING },
                             onSeeNotams = { briefingTab = BriefingTab.NOTAMS; page = Page.BRIEFING },
                             onOpenAirportMap = { mapMode = MapMode.AIRPORT; page = Page.MAP },
@@ -237,6 +224,28 @@ private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel, m
                         Screen.SHIFT -> ShiftScreen(shiftVm, records, health, snap, now, state.settings.age)
                     }
                 }
+            }
+        }
+    }
+
+    page?.let { p ->
+        if (snap != null) FullScreenPopup(p.title, onClose = { page = null }) {
+            when (p) {
+                Page.MAP -> MapTab(
+                    state, mapVm, mapMode, onMode = { mapMode = it },
+                    selectedAircraft = mapSelection, onSelectAircraft = { mapSelection = it }, onDetails = { detail = it },
+                )
+                Page.BRIEFING -> BriefingScreen(
+                    state, now, briefingTab, onTab = { briefingTab = it },
+                    onSelectAirport = vm::selectAirport,
+                )
+                Page.ARRIVALS, Page.DEPARTURES -> FlightsScreen(
+                    if (p == Page.ARRIVALS) Dir.INBOUND else Dir.OUTBOUND, state, now,
+                    onFilter = vm::setFilter,
+                    onConfigureMine = { showSettings = true },
+                    onFlight = { detail = it },
+                    onRefresh = vm::refreshAll,
+                )
             }
         }
     }
@@ -295,14 +304,22 @@ private fun DirToggle(dir: Dir, onDir: (Dir) -> Unit) {
     }
 }
 
+/** The map, a board or the briefing enlarged over the tabs; back or the close button returns. */
 @Composable
-private fun PageBar(title: String, onBack: () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack, modifier = Modifier.size(52.dp)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+private fun FullScreenPopup(title: String, onClose: () -> Unit, content: @Composable () -> Unit) {
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Column(Modifier.fillMaxSize()) {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 16.dp).weight(1f))
+                        IconButton(onClick = onClose, modifier = Modifier.size(52.dp)) {
+                            Icon(Icons.Filled.Close, contentDescription = "Close")
+                        }
+                    }
+                }
+                Box(Modifier.weight(1f)) { content() }
             }
-            Text(title, style = MaterialTheme.typography.titleLarge)
         }
     }
 }

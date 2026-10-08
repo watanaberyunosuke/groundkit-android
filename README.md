@@ -17,12 +17,12 @@ The four tabs are the same as the iOS app's: **Now**, **Flights**, **Turnarounds
 
 | Tab | For ramp staff |
 |---|---|
-| **Now** | Airport local time and UTC, ramp weather alerts, wind/visibility/temperature/QNH, links to the airport map, the airspace map and the briefing, the next arrivals and departures, airside NOTAMs |
+| **Now** | Airport local time and UTC, ramp weather alerts, wind/visibility/temperature/QNH, a still airspace map (tap to enlarge), links to the airport map and the briefing, the next arrivals and departures (*See all* enlarges the board), airside NOTAMs |
 | **Flights** | *Arrivals*: inbound now (ETA, countdown, delay status), landed and on the ground, regular flights coming up in the next 6 h, the last 3 h. *Departures*: on the ground and due out (late if past the usual time), departed, coming up, earlier. The tab's badge counts arrivals in the air |
 | **Turnarounds** | A checklist per flight: chocks, cones, GPU, holds, bags and cargo off, fuelling, catering, cleaning, water, bags and cargo loaded, NOTOC (with dangerous goods only), loadsheet, holds closed, GPU off, chocks off, pushback. One tap stamps the time, tap again to undo. Bag and ULD counters, stand, registration, notes, and a countdown to the target off-block time. Start one from any flight's details, or add one; swipe one away to delete it |
 | **Shift** | Time on shift and since the last logged break, water logged against a target that rises with the heat, fatigue (sleep before the shift, rest, hours this week), heat-strain warnings from heart rate, and from Health Connect: steps, distance, active energy and heart rate. A summary when the shift ends. Handover notes for the next crew, recent shifts |
 
-Opened from Now, over the tabs (back returns); the map also opens from the map button at the top of every tab:
+These open from Now as full-screen pop-ups over the tabs (back or ✕ closes them); the map also opens from the map button at the top of every tab:
 
 - **Map**. *Airport*: the layout from OpenStreetMap (runways, taxiways with their letters, stands, gates, holding points, aprons, terminals, cargo buildings, service roads), your position, search for a gate, stand, taxiway or building, and a route there by road. *Airspace* (also from any flight): live aircraft coloured by delay status, observed arrival/departure paths, the 50 NM terminal area. Pinch to zoom, tap an aircraft for details.
 - **Briefing**: decoded METAR plus raw METAR and TAF, 72 h wind chart, 7-day weather for every airport, NOTAMs (airside filter, search), 30-day traffic.
