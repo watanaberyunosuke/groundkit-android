@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.FlightLand
@@ -65,6 +66,7 @@ import com.harrydatahub.groundkit.ui.screens.FlightsScreen
 import com.harrydatahub.groundkit.ui.screens.NowScreen
 import com.harrydatahub.groundkit.ui.screens.SettingsSheet
 import com.harrydatahub.groundkit.ui.screens.ShiftScreen
+import com.harrydatahub.groundkit.ui.screens.TurnaroundsScreen
 import com.harrydatahub.groundkit.ui.theme.RampTheme
 
 /** Bottom-bar destinations. The map also opens from Now and from a flight, on the airspace. */
@@ -74,11 +76,12 @@ enum class Screen(val label: String, val icon: ImageVector) {
     DEPARTURES("Departures", Icons.Filled.FlightTakeoff),
     MAP("Map", Icons.Filled.Map),
     BRIEFING("Briefing", Icons.Filled.Cloud),
+    TURNS("Turns", Icons.Filled.Checklist),
     SHIFT("Shift", Icons.Filled.HealthAndSafety),
 }
 
 @Composable
-fun AppRoot(vm: AppViewModel, shiftVm: ShiftViewModel, mapVm: MapViewModel) {
+fun AppRoot(vm: AppViewModel, shiftVm: ShiftViewModel, mapVm: MapViewModel, turnVm: TurnaroundViewModel) {
     val state by vm.state.collectAsStateWithLifecycle()
     val minute by rememberNow(60_000)
     val airport = state.snapshot?.airport
@@ -94,14 +97,16 @@ fun AppRoot(vm: AppViewModel, shiftVm: ShiftViewModel, mapVm: MapViewModel) {
             view.keepScreenOn = state.settings.keepScreenOn
             onDispose { view.keepScreenOn = false }
         }
-        Content(state, vm, shiftVm, mapVm)
+        Content(state, vm, shiftVm, mapVm, turnVm)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel, mapVm: MapViewModel) {
+private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel, mapVm: MapViewModel, turnVm: TurnaroundViewModel) {
     val records by shiftVm.records.collectAsStateWithLifecycle()
+    val turnarounds by turnVm.turnarounds.collectAsStateWithLifecycle()
+    var openTurnaround by rememberSaveable { mutableStateOf<String?>(null) }
     val health by shiftVm.healthState.collectAsStateWithLifecycle()
     var screen by rememberSaveable { mutableStateOf(Screen.NOW) }
     var briefingTab by rememberSaveable { mutableStateOf(BriefingTab.WEATHER) }
@@ -156,7 +161,7 @@ private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel, m
                         selected = screen == s,
                         onClick = { screen = s },
                         icon = { Icon(s.icon, contentDescription = null) },
-                        // Six tabs: the smaller label keeps "Departures" whole on a phone.
+                        // Seven tabs: the smaller label keeps each on one line.
                         label = { Text(s.label, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelSmall) },
                     )
                 }
@@ -195,6 +200,9 @@ private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel, m
                             state, now, briefingTab, onTab = { briefingTab = it },
                             onSelectAirport = vm::selectAirport,
                         )
+                        Screen.TURNS -> TurnaroundsScreen(
+                            turnVm, turnarounds, snap, now, openTurnaround, onOpen = { openTurnaround = it },
+                        )
                         Screen.SHIFT -> ShiftScreen(shiftVm, records, health, snap, now, state.settings.age)
                     }
                 }
@@ -226,6 +234,11 @@ private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel, m
                 mapSelection = icao24
                 mapMode = MapMode.AIRSPACE
                 screen = Screen.MAP
+                detail = null
+            },
+            onStartTurnaround = {
+                openTurnaround = turnVm.startFrom(d, snap.airport.icao)
+                screen = Screen.TURNS
                 detail = null
             },
             onDismiss = { detail = null },

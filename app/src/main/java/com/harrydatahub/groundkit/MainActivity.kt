@@ -10,12 +10,14 @@ import com.harrydatahub.groundkit.ui.AppRoot
 import com.harrydatahub.groundkit.ui.AppViewModel
 import com.harrydatahub.groundkit.ui.MapViewModel
 import com.harrydatahub.groundkit.ui.ShiftViewModel
+import com.harrydatahub.groundkit.ui.TurnaroundViewModel
 import java.io.File
 
 class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels()
     private val shiftVm: ShiftViewModel by viewModels()
     private val mapVm: MapViewModel by viewModels()
+    private val turnVm: TurnaroundViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,6 +26,6 @@ class MainActivity : ComponentActivity() {
             runCatching { HttpResponseCache.install(File(cacheDir, "http"), 50L * 1024 * 1024) }
         }
         enableEdgeToEdge()
-        setContent { AppRoot(vm, shiftVm, mapVm) }
+        setContent { AppRoot(vm, shiftVm, mapVm, turnVm) }
     }
 }

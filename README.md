@@ -20,6 +20,7 @@ The app was called Ramp Ops until October 2026. Its application ID changed with 
 | **Departures** | On the ground and due out (late if past the usual time), departed, coming up, earlier |
 | **Map** | *Airport*: the layout from OpenStreetMap (runways, taxiways with their letters, stands, gates, holding points, aprons, terminals, cargo buildings, service roads), your position, search for a gate, stand, taxiway or building, and a route there by road. *Airspace*: live traffic, as below |
 | **Briefing** | Decoded METAR plus raw METAR and TAF, 72 h wind chart, 7-day weather for every airport, NOTAMs (airside filter, search), 30-day traffic |
+| **Turns** | A turnaround checklist per flight, as in the iOS app: chocks, cones, GPU, holds, bags and cargo off, fuelling, catering, cleaning, water, bags and cargo loaded, NOTOC (with dangerous goods only), loadsheet, holds closed, GPU off, chocks off, pushback. One tap stamps the time, tap again to undo. Bag and ULD counters, stand, registration, notes, and a countdown to the target off-block time. Start one from any flight's details, or add one |
 | **Shift** | Time on shift and since the last logged break, water logged against a target that rises with the heat, fatigue (sleep before the shift, rest, hours this week), heat-strain warnings from heart rate, and from Health Connect: steps, distance, active energy and heart rate. A summary when the shift ends. Handover notes for the next crew, recent shifts |
 
 The **airspace map** opens from Now and from any flight, or from the Map tab: live aircraft coloured by delay status, observed arrival/departure paths, the 50 NM terminal area. Pinch to zoom, tap an aircraft for details.
@@ -49,6 +50,12 @@ The Shift tab is the Android counterpart of the iOS app's Shift tab, with Health
 - Cargo buildings are those tagged as warehouses or named for cargo, freight, logistics, express, mail or the big integrators. Service roads (where tugs, dollies and other GSE drive) are drawn in orange.
 - Routes are the shortest path along the mapped roads (`RoadGraph` in `domain/AirportLayout.kt`), keeping to one-way roads where it can, with an estimate at 25 km/h. They never use taxiways or runways. OSM is mapped by volunteers, so the app says to follow the airport's charts, markings and airside driving rules.
 - Your position comes from the platform's location providers (no Play services), only while a map is on screen, and only after you allow it from the map's location button. It is not stored or sent anywhere.
+
+## Turnarounds
+
+- Kept in a file on the device (`TurnaroundStore`), like shifts: restored by Auto Backup, not synced between devices. iOS syncs them through iCloud.
+- The target off-block time is entered as airport local time: today, or tomorrow when that is more than 12 h ago.
+- Taps in the first 0.8 s after opening a turnaround are ignored, so the tap that opened it (or a gloved double tap) does not mark a step.
 
 ## Fatigue and heat strain
 
@@ -81,6 +88,7 @@ The unit tests check:
 - the Parquet reader, cell by cell, against DuckDB's reading of real API exports and of synthetic files covering every codec, page version and encoding (`app/src/test/resources/parquet/make_fixtures.py`);
 - `FlightHistory` against the Dive's own `historyQ` SQL, run in DuckDB on HKG's real flights (`app/src/test/resources/history/make_history_fixture.py`);
 - placement, ETA, delay bands, landing detection, boards, ramp alerts, operator filters and the live JSON;
-- heat index and wind chill against the iOS app's test values, the water target, break prompts and the shift records file.
+- heat index and wind chill against the iOS app's test values, the water target, break prompts and the shift records file;
+- turnaround steps (NOTOC with dangerous goods only), next step and progress, the off-block time across midnight, and the turnarounds file.
 
 To regenerate the fixtures, run the scripts with the aviation project's Python environment (it has `duckdb`).
