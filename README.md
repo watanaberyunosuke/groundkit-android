@@ -28,7 +28,7 @@ Ramp-specific additions not in the web Dive:
 
 - **Ramp weather alerts** from the latest METAR: thunderstorm or hail, gusts and high wind (thresholds set in Settings to match station limits), low visibility, freezing conditions, heat stress by heat index and cold by wind chill (the iOS app's thresholds), rain, plus a note when the METAR is old. They are advisories; local procedures take precedence.
 - **Filters**: all flights or *My airlines* (the IATA or ICAO codes of the airlines you handle). There is no cargo-only filter, since passenger flights carry belly cargo too; flights the backend tags as freighters (`is_freighter` on the flight marts and `/api/live`, from its `cargo_operators` list) are tagged *Freighter* instead.
-- **Built for outdoor use**: large type and touch targets, status shown as icon, word and colour, a high-contrast light theme and a hi-vis dark theme, an optional keep-screen-on setting, pull to refresh.
+- **Built for outdoor use**: large type and touch targets, status shown as icon, word and colour, high-contrast light and dark themes in the GroundKit blues (navy in light, light blue in dark; amber is kept for caution only), an optional keep-screen-on setting, pull to refresh.
 - **Themes**: *Auto* (the default) follows the phone's dark theme setting, including its own schedule. *Sunset* goes dark from sunset to sunrise at the selected airport, whatever the phone is set to, so a night shift goes dark on its own; sun times use the Astronomical Almanac's low-precision formulae (`domain/Solar.kt`, within a minute or two). *Light* and *Dark* are fixed.
 - **Offline**: every table download is kept on the device. Without signal the app opens with the last data and says how old it is.
 
