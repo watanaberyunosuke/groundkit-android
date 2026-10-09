@@ -34,13 +34,23 @@ data class Settings(
     val age: Int = 0,
 )
 
-class SettingsStore(context: Context) {
+class SettingsStore private constructor(context: Context) {
+    companion object {
+        @Volatile private var instance: SettingsStore? = null
+
+        /** One store per process, shared by the screens and the account sync. */
+        fun get(context: Context): SettingsStore =
+            instance ?: synchronized(this) { instance ?: SettingsStore(context.applicationContext).also { instance = it } }
+    }
+
     private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
     private val state = MutableStateFlow(load())
     val settings: StateFlow<Settings> = state.asStateFlow()
 
+    @Synchronized
     fun update(change: (Settings) -> Settings) {
         val next = change(state.value)
+        if (next == state.value) return
         state.value = next
         prefs.edit()
             .putString("airport", next.airport)

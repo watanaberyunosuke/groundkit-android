@@ -12,6 +12,7 @@ import com.harrydatahub.groundkit.data.Settings
 import com.harrydatahub.groundkit.data.SettingsStore
 import com.harrydatahub.groundkit.data.Warehouse
 import com.harrydatahub.groundkit.data.WarehouseRepository
+import com.harrydatahub.groundkit.data.account.SettingsBridge
 import com.harrydatahub.groundkit.domain.AirportSnapshot
 import com.harrydatahub.groundkit.domain.BoardLive
 import com.harrydatahub.groundkit.domain.BoardRow
@@ -81,7 +82,9 @@ data class UiState(
 )
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
-    private val settingsStore = SettingsStore(app)
+    private val settingsStore = SettingsStore.get(app)
+    /** The airport the boards were built for, to notice a change made by account sync. */
+    private var airportCode = settingsStore.settings.value.airport
     private val api = AviationApi(BuildConfig.API_BASE, app.noBackupFilesDir)
     private val repo = WarehouseRepository(api)
 
@@ -105,7 +108,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             refreshTables()
         }
         viewModelScope.launch {
-            settingsStore.settings.drop(1).collect { publish() }
+            settingsStore.settings.drop(1).collect { s ->
+                // Picked here (selectAirport) or synced from another device.
+                if (s.airport != airportCode) switchAirport(s.airport) else publish()
+            }
         }
     }
 
@@ -137,17 +143,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun selectAirport(iata: String) {
         if (iata == _state.value.settings.airport) return
-        viewModelScope.launch {
-            lock.withLock {
-                memory.clear()
-                directions.clear()
-                feed = null
-            }
-            settingsStore.update { it.copy(airport = iata) }
-            _state.update { it.copy(live = LiveStatus(loading = true), traffic = null) }
-            publish()
-            fetchLive()
+        settingsStore.update { it.copy(airport = iata) }
+    }
+
+    private suspend fun switchAirport(code: String) {
+        airportCode = code
+        lock.withLock {
+            memory.clear()
+            directions.clear()
+            feed = null
         }
+        _state.update { it.copy(live = LiveStatus(loading = true), traffic = null) }
+        publish()
+        fetchLive()
     }
 
     fun setFilter(filter: FlightFilter) = settingsStore.update { it.copy(filter = filter) }
@@ -176,6 +184,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun setWarehouse(w: Warehouse) {
+        SettingsBridge.registerAirports(w.airports.map { it.iata to it.icao })
         val firstLoad = lock.withLock {
             val first = warehouse == null
             warehouse = w
