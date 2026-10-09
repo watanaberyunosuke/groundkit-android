@@ -53,6 +53,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconButton
@@ -387,9 +388,8 @@ private fun TurnaroundDetail(vm: TurnaroundViewModel, t: Turnaround, zone: ZoneI
 /** One step: tap to stamp it done now; tap again to undo, after a confirm. */
 @Composable
 private fun StepButton(step: TurnaroundStep, doneAt: Long?, isNext: Boolean, zone: ZoneId, modifier: Modifier, onClick: () -> Unit) {
-    val green = LocalStatusColors.current.green
+    val s = LocalStatusColors.current
     val done = doneAt != null
-    val content = if (done) green.readableContent() else MaterialTheme.colorScheme.onSurface
     Surface(
         onClick = onClick,
         modifier = modifier.heightIn(min = 84.dp).semantics {
@@ -397,15 +397,18 @@ private fun StepButton(step: TurnaroundStep, doneAt: Long?, isNext: Boolean, zon
         },
         shape = RoundedCornerShape(14.dp),
         color = when {
-            done -> green
+            done -> s.greenContainer
             isNext -> MaterialTheme.colorScheme.primaryContainer
             else -> MaterialTheme.colorScheme.surfaceContainerHigh
         },
-        contentColor = content,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         border = if (isNext) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(if (done) Icons.Filled.CheckCircle else step.icon, contentDescription = null, modifier = Modifier.size(28.dp))
+            Icon(
+                if (done) Icons.Filled.CheckCircle else step.icon, contentDescription = null,
+                tint = if (done) s.green else LocalContentColor.current, modifier = Modifier.size(28.dp),
+            )
             Spacer(Modifier.width(10.dp))
             Column {
                 Text(step.title, style = MaterialTheme.typography.titleMedium)

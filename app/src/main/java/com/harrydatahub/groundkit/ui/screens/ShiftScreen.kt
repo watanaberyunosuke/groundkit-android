@@ -234,9 +234,10 @@ private fun ShiftClock(shift: Shift, zone: ZoneId, now: Long, onBreak: () -> Uni
 private fun FindingBanner(f: Finding) {
     val s = LocalStatusColors.current
     val tint = if (f.level == Level.WARNING) s.red else s.amber
+    val fill = if (f.level == Level.WARNING) s.redContainer else s.amberContainer
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = tint.copy(alpha = 0.14f),
+        color = fill,
         border = BorderStroke(2.dp, tint),
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
     ) {

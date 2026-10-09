@@ -17,14 +17,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -80,7 +78,8 @@ import com.harrydatahub.groundkit.ui.theme.RampTheme
 
 /** Bottom-bar destinations, the same four as the iOS app. */
 enum class Screen(val label: String, val icon: ImageVector) {
-    NOW("Now", Icons.Filled.Dashboard),
+    // A clock: Now opens on the local and UTC clocks, as on iOS.
+    NOW("Now", Icons.Filled.Schedule),
     FLIGHTS("Flights", Icons.Filled.Flight),
     TURNAROUNDS("Turnarounds", Icons.Filled.Checklist),
     SHIFT("Shift", Icons.Filled.HealthAndSafety),
@@ -130,8 +129,6 @@ private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel, m
 
     // Back goes to Now before leaving the app; a pop-up closes itself first.
     BackHandler(enabled = screen != Screen.NOW) { screen = Screen.NOW }
-    // Airborne arrivals on the Flights tab, as on iOS.
-    val inbound = state.traffic?.boardLive?.count { it.dir == Dir.INBOUND && !it.onGround } ?: 0
 
     val snap = state.snapshot
     Scaffold(
@@ -177,13 +174,7 @@ private fun Content(state: UiState, vm: AppViewModel, shiftVm: ShiftViewModel, m
                     NavigationBarItem(
                         selected = screen == s,
                         onClick = { screen = s; page = null },
-                        icon = {
-                            if (s == Screen.FLIGHTS && inbound > 0) {
-                                BadgedBox(badge = { Badge { Text("$inbound") } }) { Icon(s.icon, contentDescription = null) }
-                            } else {
-                                Icon(s.icon, contentDescription = null)
-                            }
-                        },
+                        icon = { Icon(s.icon, contentDescription = null) },
                         label = { Text(s.label, maxLines = 1, softWrap = false) },
                     )
                 }

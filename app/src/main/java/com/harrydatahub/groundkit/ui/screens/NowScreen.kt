@@ -19,7 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.LocalParking
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -105,7 +105,7 @@ fun NowScreen(
         item { MapPreview(state, onOpenMap) }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                PageLink(Icons.Filled.LocalParking, "Airport map: stands, gates, routes", onOpenAirportMap)
+                PageLink(Icons.Filled.Map, "Airport map: stands, gates, routes", onOpenAirportMap)
                 PageLink(Icons.Filled.Cloud, "Briefing: METAR, TAF, NOTAMs, traffic", onOpenBriefing)
             }
         }

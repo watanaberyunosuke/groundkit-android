@@ -28,11 +28,11 @@ import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Grain
+import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Thunderstorm
 import androidx.compose.material.icons.filled.Umbrella
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material3.Card
@@ -104,10 +104,22 @@ fun toneColor(tone: Tone): Color {
     }
 }
 
+/** Fill behind [toneColor]. */
+@Composable
+fun toneContainer(tone: Tone): Color {
+    val s = LocalStatusColors.current
+    return when (tone) {
+        Tone.GREEN -> s.greenContainer
+        Tone.AMBER -> s.amberContainer
+        Tone.RED -> s.redContainer
+        Tone.UNKNOWN, Tone.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
+    }
+}
+
 private fun toneIcon(tone: Tone): ImageVector? = when (tone) {
     Tone.GREEN -> Icons.Filled.CheckCircle
     Tone.AMBER -> Icons.Filled.Schedule
-    Tone.RED -> Icons.Filled.Warning
+    Tone.RED -> Icons.Filled.Report
     Tone.UNKNOWN -> Icons.AutoMirrored.Filled.HelpOutline
     Tone.NEUTRAL -> null
 }
@@ -131,7 +143,7 @@ fun StatusPill(text: String, tone: Tone, modifier: Modifier = Modifier) {
     Row(
         modifier
             .clip(RoundedCornerShape(50))
-            .background(color.copy(alpha = 0.14f))
+            .background(toneContainer(tone))
             .padding(horizontal = 10.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -242,11 +254,11 @@ fun EmptyState(text: String, modifier: Modifier = Modifier) {
 @Composable
 fun AlertCard(alert: RampAlert, modifier: Modifier = Modifier) {
     val s = LocalStatusColors.current
-    val color = when (alert.level) {
-        AlertLevel.WARNING -> s.red
-        AlertLevel.CAUTION -> s.amber
-        // Neutral, so information never reads as a caution.
-        AlertLevel.INFO -> MaterialTheme.colorScheme.secondary
+    // Info is blue, so it never reads as a caution.
+    val (color, fill) = when (alert.level) {
+        AlertLevel.WARNING -> s.red to s.redContainer
+        AlertLevel.CAUTION -> s.amber to s.amberContainer
+        AlertLevel.INFO -> s.info to s.infoContainer
     }
     val icon = when (alert.kind) {
         AlertKind.THUNDERSTORM -> Icons.Filled.Thunderstorm
@@ -268,7 +280,7 @@ fun AlertCard(alert: RampAlert, modifier: Modifier = Modifier) {
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(color.copy(alpha = 0.13f))
+            .background(fill)
             .border(2.dp, color, RoundedCornerShape(12.dp))
             .padding(12.dp)
             .semantics(mergeDescendants = true) {},
@@ -285,12 +297,13 @@ fun AlertCard(alert: RampAlert, modifier: Modifier = Modifier) {
 
 @Composable
 fun NoAlertsCard() {
-    val green = LocalStatusColors.current.green
+    val s = LocalStatusColors.current
+    val green = s.green
     Row(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(green.copy(alpha = 0.10f))
+            .background(s.greenContainer)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -464,9 +477,10 @@ fun FreshnessBanner(fromCache: Boolean, fetchedAt: Long?, error: String?, now: L
     if (fetchedAt == null) return
     val ageMin = (now - fetchedAt) / 60_000
     if (!fromCache && ageMin < 30) return
-    val amber = LocalStatusColors.current.amber
+    val s = LocalStatusColors.current
+    val amber = s.amber
     Surface(
-        color = amber.copy(alpha = 0.16f),
+        color = s.amberContainer,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onRetry),

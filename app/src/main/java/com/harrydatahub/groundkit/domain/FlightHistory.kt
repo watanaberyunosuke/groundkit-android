@@ -22,7 +22,26 @@ data class Usual(
     val recent: List<Long>,
     /** Tagged by the backend as flown by an all-cargo operator. */
     val freighter: Boolean = false,
-)
+) {
+    /** [other] as a three-letter code for the boards; null when the airport has none. */
+    val otherIata: String? get() = AirportCodes.iata(other)
+}
+
+/**
+ * The API falls back to the ICAO code when its table has no IATA match, so recoded
+ * airports (Sunshine Coast, reported as YBMC, now YBSU/MCY) arrive with four letters.
+ * The same mapping as the iOS app.
+ */
+object AirportCodes {
+    /** Old ICAO codes still reported for airports that have since been recoded. */
+    private val legacyIata = mapOf("YBMC" to "MCY", "YSCH" to "CFS", "VGZR" to "DAC")
+
+    fun iata(code: String?): String? = when {
+        code == null -> null
+        code.length == 3 -> code
+        else -> legacyIata[code]
+    }
+}
 
 data class CallsignHistory(val inbound: Usual? = null, val outbound: Usual? = null) {
     operator fun get(dir: Dir) = if (dir == Dir.INBOUND) inbound else outbound

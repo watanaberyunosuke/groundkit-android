@@ -9,12 +9,20 @@ import androidx.compose.ui.graphics.luminance
  * Colours with a meaning: delay status (red / amber / green), flight category, map
  * paths. Status is never shown by colour alone; text and icons carry it too. Values are
  * shared with the dashboard, website and iOS app (DESIGN.md in the aviation repo).
+ *
+ * Status colours are muted, as on iOS: a soft tone for icons, text and map marks, and a
+ * pale container to fill behind them. Each tone passes 4.5:1 on its container.
  */
 @Immutable
 data class StatusColors(
     val green: Color,
     val amber: Color,
     val red: Color,
+    val info: Color,
+    val greenContainer: Color,
+    val amberContainer: Color,
+    val redContainer: Color,
+    val infoContainer: Color,
     val unknown: Color,
     val vfr: Color,
     val mvfr: Color,
@@ -29,9 +37,14 @@ data class StatusColors(
 )
 
 val LightStatusColors = StatusColors(
-    green = Color(0xFF15803D),
-    amber = Color(0xFFB45309),
-    red = Color(0xFFC81E1E),
+    green = Color(0xFF2B744A),
+    amber = Color(0xFF94591A),
+    red = Color(0xFFAD3B3B),
+    info = Color(0xFF2F6299),
+    greenContainer = Color(0xFFE3F0E7),
+    amberContainer = Color(0xFFF7ECDB),
+    redContainer = Color(0xFFF7E3E1),
+    infoContainer = Color(0xFFE2EBF6),
     unknown = Color(0xFF6B7280),
     vfr = Color(0xFF15803D),
     mvfr = Color(0xFF1D4ED8),
@@ -46,9 +59,14 @@ val LightStatusColors = StatusColors(
 )
 
 val DarkStatusColors = StatusColors(
-    green = Color(0xFF22C55E),
-    amber = Color(0xFFFBBF24),
-    red = Color(0xFFF87171),
+    green = Color(0xFF86C9A0),
+    amber = Color(0xFFE2B672),
+    red = Color(0xFFEE9B95),
+    info = Color(0xFF94B8E3),
+    greenContainer = Color(0xFF1E3427),
+    amberContainer = Color(0xFF3A2F1C),
+    redContainer = Color(0xFF3E2525),
+    infoContainer = Color(0xFF1D2B3F),
     unknown = Color(0xFF9AA0A8),
     vfr = Color(0xFF22C55E),
     mvfr = Color(0xFF60A5FA),
