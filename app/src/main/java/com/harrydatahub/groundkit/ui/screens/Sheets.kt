@@ -123,6 +123,8 @@ fun SettingsSheet(
         ) {
             Text("Settings", style = MaterialTheme.typography.titleLarge)
 
+            AccountSection()
+
             Column {
                 Label("My airlines")
                 Text(

@@ -67,6 +67,15 @@ The Shift tab is the Android counterpart of the iOS app's Shift tab, with Health
 - **Breaks** are logged with a button; the break prompt shows after 2 hours without one. **Ending a shift** keeps a summary with it: time, breaks and the longest stretch without one, water against the target, steps, distance, active energy, average and peak heart rate, and sleep before it.
 - All guidance, not medical advice: rosters, the employer's fatigue and heat procedures, and supervisors decide.
 
+## Account (optional)
+
+Settings > Account signs in with Apple, Google or Microsoft (a Custom Tab with PKCE, returning to `groundkit://auth-callback`) or an email and password, through Supabase Auth. Signed in, the airport, theme, keep screen on and wind alerts sync with the iOS app and the web dashboard. Airlines, the flight filter and age stay on the device. Manage account > Delete account removes the account and its synced settings.
+
+- `data/account`: `SupabaseClient` (HttpURLConnection, no SDK), `AccountManager` (session, refresh, sync), `SessionStore` (session encrypted with an Android Keystore key, left out of backups), `SettingsBridge` (app settings to and from the shared keys) and `SyncedSettings` (the shared contract and its per-key merge).
+- To switch it on, set `groundkit.supabaseUrl` and `groundkit.supabaseKey` (the project's publishable key) in `gradle.properties` or `~/.gradle/gradle.properties`. Without them the section is hidden.
+
+The contract, the Supabase setup and known gaps are in the aviation repo's [docs/accounts.md](https://github.com/watanaberyunosuke/motherduck-aviation-data-analysis/blob/main/docs/accounts.md).
+
 ## How it is built
 
 - Kotlin, Jetpack Compose, Material 3, one `AppViewModel`; minSdk 26.
@@ -91,6 +100,7 @@ The unit tests check:
 - `FlightHistory` against the Dive's own `historyQ` SQL, run in DuckDB on HKG's real flights (`app/src/test/resources/history/make_history_fixture.py`);
 - placement, ETA, delay bands, landing detection, boards, ramp alerts, operator filters and the live JSON;
 - heat index and wind chill against the iOS app's test values, the water target, break prompts and the shift records file;
-- turnaround steps (NOTOC with dangerous goods only), next step and progress, the off-block time across midnight, and the turnarounds file.
+- turnaround steps (NOTOC with dangerous goods only), next step and progress, the off-block time across midnight, and the turnarounds file;
+- account sync: the settings merge, the mapping to the app's settings, PKCE, session and error parsing. `SupabaseIntegrationTest` also runs against a test Supabase project when `GK_SUPABASE_TEST_URL` and `GK_SUPABASE_TEST_KEY` are set (it creates and deletes a user, so turn off email confirmation there).
 
 To regenerate the fixtures, run the scripts with the aviation project's Python environment (it has `duckdb`).
