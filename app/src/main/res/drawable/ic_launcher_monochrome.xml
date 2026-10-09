@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The GroundKit mark as one colour for the themed icon: the windows and the cab window are cut out. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.66"
+        android:scaleY="0.66"
+        android:translateX="17.766"
+        android:translateY="25.191">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M32 38.5 L20.6 20.2 C20.1 19.5 19.4 19 18.5 19 L15.2 19 C14.4 19 13.8 19.7 13.9 20.5 L15.6 38.5 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M20 38 L68 38 C75.5 38 81.4 41.8 83.4 46.4 C84.4 49.6 82.2 52.5 78 52.5 L34 52.5 C26 52.5 18.5 47.6 12.9 43.1 C12 42.4 12.2 41.1 13.2 40.6 C15.1 39 17.4 38 20 38 ZM73.2 41.6 L78.4 41.6 C79.3 41.6 80 42.1 80.5 42.8 L81.3 44.2 L74 44.2 C73.3 44.2 72.8 43.6 72.8 42.9 C72.8 42.2 72.9 41.6 73.2 41.6 ZM30.6,43.2a1,1 0,1 0,2,0a1,1 0,1 0,-2,0ZM34.9,43.2a1,1 0,1 0,2,0a1,1 0,1 0,-2,0ZM39.2,43.2a1,1 0,1 0,2,0a1,1 0,1 0,-2,0ZM43.5,43.2a1,1 0,1 0,2,0a1,1 0,1 0,-2,0ZM47.8,43.2a1,1 0,1 0,2,0a1,1 0,1 0,-2,0ZM52.1,43.2a1,1 0,1 0,2,0a1,1 0,1 0,-2,0ZM56.4,43.2a1,1 0,1 0,2,0a1,1 0,1 0,-2,0ZM60.7,43.2a1,1 0,1 0,2,0a1,1 0,1 0,-2,0ZM65,43.2a1,1 0,1 0,2,0a1,1 0,1 0,-2,0Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M38.5 50.5 L60.5 50.5 L56 55 C55.6 55.4 55.1 55.6 54.5 55.6 L36.6 55.6 C35.8 55.6 35.5 54.7 36.1 54.2 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M45.9,55.4h8.4a3.5,3.5 0,0 1,3.5,3.5v0a3.5,3.5 0,0 1,-3.5,3.5h-8.4a3.5,3.5 0,0 1,-3.5,-3.5v-0a3.5,3.5 0,0 1,3.5,-3.5Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M61.4,52h1.6v7.4h-1.6Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M59.8,61.2a2.4,2.4 0,1 0,4.8,0a2.4,2.4 0,1 0,-4.8,0Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M76.2,52h1.4v7.6h-1.4Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M74.9,61.6a2,2 0,1 0,4,0a2,2 0,1 0,-4,0Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M77.65,60.9h6.9a0.75,0.75 0,0 1,0.75,0.75v0a0.75,0.75 0,0 1,-0.75,0.75h-6.9a0.75,0.75 0,0 1,-0.75,-0.75v-0a0.75,0.75 0,0 1,0.75,-0.75Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M85.6 57 L96 57 C96.9 57 97.6 57.7 97.6 58.6 L97.6 62.4 C97.6 63.3 96.9 64 96 64 L85 64 C84.1 64 83.4 63.3 83.4 62.4 L83.4 59.2 C83.4 58 84.4 57 85.6 57 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M90.6 52.4 L96 52.4 C96.9 52.4 97.6 53.1 97.6 54 L97.6 57.4 L89.2 57.4 L89.2 53.8 C89.2 53 89.8 52.4 90.6 52.4 ZM90.6 53.7 L93.6 53.7 L93.6 56.2 L90.6 56.2 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M93.9,50.7h1a0.5,0.5 0,0 1,0.5,0.5v0.7a0.5,0.5 0,0 1,-0.5,0.5h-1a0.5,0.5 0,0 1,-0.5,-0.5v-0.7a0.5,0.5 0,0 1,0.5,-0.5Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M84.8,64.1a2,2 0,1 0,4,0a2,2 0,1 0,-4,0Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M92.2,64.1a2,2 0,1 0,4,0a2,2 0,1 0,-4,0Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillAlpha="0.4"
+            android:pathData="M11.55,67.2h85.9a0.55,0.55 0,0 1,0.55,0.55v0a0.55,0.55 0,0 1,-0.55,0.55h-85.9a0.55,0.55 0,0 1,-0.55,-0.55v-0a0.55,0.55 0,0 1,0.55,-0.55Z" />
+    </group>
+</vector>
