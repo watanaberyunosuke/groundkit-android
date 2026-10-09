@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The GroundKit mark (a tug pushing back an aircraft, seen from above) inside the 66 dp safe
-     zone. Drawn on the 100-unit grid of the website's icon.svg, scaled 0.83 and centred. -->
+<!-- The GroundKit mark as one colour for the themed icon: the cab window is cut out. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -33,34 +32,20 @@
             android:fillColor="#FFFFFFFF"
             android:pathData="M47.80 65.60H52.20A0.8 0.8 0 0 1 53.00 66.40V66.40A0.8 0.8 0 0 1 52.20 67.20H47.80A0.8 0.8 0 0 1 47.00 66.40V66.40A0.8 0.8 0 0 1 47.80 65.60Z" />
         <path
-            android:fillColor="#FF8796AD"
+            android:fillColor="#FFFFFFFF"
             android:pathData="M42.60 73.00H43.20A1.2 1.2 0 0 1 44.40 74.20V77.80A1.2 1.2 0 0 1 43.20 79.00H42.60A1.2 1.2 0 0 1 41.40 77.80V74.20A1.2 1.2 0 0 1 42.60 73.00Z" />
         <path
-            android:fillColor="#FF8796AD"
+            android:fillColor="#FFFFFFFF"
             android:pathData="M56.80 73.00H57.40A1.2 1.2 0 0 1 58.60 74.20V77.80A1.2 1.2 0 0 1 57.40 79.00H56.80A1.2 1.2 0 0 1 55.60 77.80V74.20A1.2 1.2 0 0 1 56.80 73.00Z" />
         <path
-            android:fillColor="#FF8796AD"
+            android:fillColor="#FFFFFFFF"
             android:pathData="M42.60 85.00H43.20A1.2 1.2 0 0 1 44.40 86.20V89.80A1.2 1.2 0 0 1 43.20 91.00H42.60A1.2 1.2 0 0 1 41.40 89.80V86.20A1.2 1.2 0 0 1 42.60 85.00Z" />
         <path
-            android:fillColor="#FF8796AD"
+            android:fillColor="#FFFFFFFF"
             android:pathData="M56.80 85.00H57.40A1.2 1.2 0 0 1 58.60 86.20V89.80A1.2 1.2 0 0 1 57.40 91.00H56.80A1.2 1.2 0 0 1 55.60 89.80V86.20A1.2 1.2 0 0 1 56.80 85.00Z" />
         <path
             android:fillColor="#FFFFFFFF"
-            android:pathData="M45.20 70.50H54.80A2.2 2.2 0 0 1 57.00 72.70V90.30A2.2 2.2 0 0 1 54.80 92.50H45.20A2.2 2.2 0 0 1 43.00 90.30V72.70A2.2 2.2 0 0 1 45.20 70.50Z" />
-        <path
-            android:fillColor="#FF0F1F3D"
-            android:pathData="M45.50 71.80H49.50A1.2 1.2 0 0 1 50.70 73.00V77.00A1.2 1.2 0 0 1 49.50 78.20H45.50A1.2 1.2 0 0 1 44.30 77.00V73.00A1.2 1.2 0 0 1 45.50 71.80Z" />
-        <path
-            android:fillColor="#FF0F1F3D"
-            android:fillAlpha="0.55"
-            android:pathData="M45.60 81.00H54.40A0.6 0.6 0 0 1 55.00 81.60V81.70A0.6 0.6 0 0 1 54.40 82.30H45.60A0.6 0.6 0 0 1 45.00 81.70V81.60A0.6 0.6 0 0 1 45.60 81.00Z" />
-        <path
-            android:fillColor="#FF0F1F3D"
-            android:fillAlpha="0.55"
-            android:pathData="M45.60 84.00H54.40A0.6 0.6 0 0 1 55.00 84.60V84.70A0.6 0.6 0 0 1 54.40 85.30H45.60A0.6 0.6 0 0 1 45.00 84.70V84.60A0.6 0.6 0 0 1 45.60 84.00Z" />
-        <path
-            android:fillColor="#FF0F1F3D"
-            android:fillAlpha="0.55"
-            android:pathData="M45.60 87.00H54.40A0.6 0.6 0 0 1 55.00 87.60V87.70A0.6 0.6 0 0 1 54.40 88.30H45.60A0.6 0.6 0 0 1 45.00 87.70V87.60A0.6 0.6 0 0 1 45.60 87.00Z" />
+            android:fillType="evenOdd"
+            android:pathData="M45.20 70.50H54.80A2.2 2.2 0 0 1 57.00 72.70V90.30A2.2 2.2 0 0 1 54.80 92.50H45.20A2.2 2.2 0 0 1 43.00 90.30V72.70A2.2 2.2 0 0 1 45.20 70.50ZM45.50 71.80H49.50A1.2 1.2 0 0 1 50.70 73.00V77.00A1.2 1.2 0 0 1 49.50 78.20H45.50A1.2 1.2 0 0 1 44.30 77.00V73.00A1.2 1.2 0 0 1 45.50 71.80Z" />
     </group>
 </vector>
