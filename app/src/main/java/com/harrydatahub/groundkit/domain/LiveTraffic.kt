@@ -234,7 +234,7 @@ object LiveTraffic {
         PlacedAircraft(
             live = a,
             placement = placement,
-            other = seen?.other,
+            other = seen?.otherIata,
             flightIata = iata,
             label = iata ?: a.callsign ?: a.icao24,
             distNm = km / KM_PER_NM,
@@ -287,7 +287,7 @@ object LiveTraffic {
             // A departure still on the ground after its usual time is running late.
             val late = if (dir == Dir.OUTBOUND && dep!! < 0) -dep else null
             rows += BoardLive(
-                callsign, dir, a.label, a.flightIata, seen.other, hhmm(seen.usualMin), true, a.distNm,
+                callsign, dir, a.label, a.flightIata, seen.otherIata, hhmm(seen.usualMin), true, a.distNm,
                 eventAt = null,
                 rag = if (dir == Dir.OUTBOUND) ragOf(late ?: 0.0) else Rag.UNKNOWN,
                 statusNote = if (late != null && late >= 15) "Late ${late.roundToInt()} min" else null,
@@ -354,7 +354,7 @@ object LiveTraffic {
                     key = "${if (past) "past" else "next"}|$callsign",
                     phase = if (past) Phase.PAST else Phase.NEXT,
                     at = now + (delta * MINUTE_MS).toLong(), estimated = false,
-                    flightIata = codes.flightIata(callsign), callsign = callsign, other = seen.other,
+                    flightIata = codes.flightIata(callsign), callsign = callsign, other = seen.otherIata,
                     status = if (past) BoardStatus.PRESUMED else BoardStatus.EXPECTED,
                     statusText = when {
                         past -> "Presumed ${if (arriving) "landed" else "departed"}, not seen live"
