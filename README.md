@@ -69,7 +69,7 @@ The Shift tab is the Android counterpart of the iOS app's Shift tab, with Health
 
 ## Account (optional)
 
-Settings > Account signs in with Apple, Google or Microsoft (a Custom Tab with PKCE, returning to `groundkit://auth-callback`) or an email and password, through Supabase Auth. Signed in, the airport, theme, keep screen on and wind alerts sync with the iOS app and the web dashboard. Airlines, the flight filter and age stay on the device. Manage account > Delete account removes the account and its synced settings.
+Settings > Account signs in with an email and password or with Google (a Custom Tab with PKCE, returning to `groundkit://auth-callback`), through Supabase Auth. Signed in, the airport, theme, keep screen on and wind alerts sync with the iOS app and the web dashboard. Airlines, the flight filter and age stay on the device. Manage account > Delete account removes the account and its synced settings.
 
 - `data/account`: `SupabaseClient` (HttpURLConnection, no SDK), `AccountManager` (session, refresh, sync), `SessionStore` (session encrypted with an Android Keystore key, left out of backups), `SettingsBridge` (app settings to and from the shared keys) and `SyncedSettings` (the shared contract and its per-key merge).
 - To switch it on, set `groundkit.supabaseUrl` and `groundkit.supabaseKey` (the project's publishable key) in `gradle.properties` or `~/.gradle/gradle.properties`. Without them the section is hidden.

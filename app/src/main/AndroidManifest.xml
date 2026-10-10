@@ -42,7 +42,7 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Provider sign-in (Apple, Google, Microsoft) returns here from the Custom Tab. -->
+            <!-- Google sign-in returns here from the Custom Tab. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
