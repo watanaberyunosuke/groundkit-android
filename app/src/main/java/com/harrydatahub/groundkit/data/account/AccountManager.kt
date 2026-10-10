@@ -26,11 +26,10 @@ data class AccountState(
     val syncError: String? = null,
 )
 
+// Apple and Microsoft are off for now: Sign in with Apple needs a paid Apple Developer
+// Program membership.
 enum class AuthProvider(val id: String, val label: String, val scopes: String? = null) {
-    APPLE("apple", "Continue with Apple"),
     GOOGLE("google", "Continue with Google"),
-    // Microsoft (Entra ID) only returns an email address when asked for it.
-    MICROSOFT("azure", "Continue with Microsoft", "email"),
 }
 
 /**
