@@ -22,7 +22,7 @@ data class SupabaseConfig(val url: String, val key: String) {
         /** Where provider sign-in returns to the app (MainActivity's intent filter). */
         const val CALLBACK_URL = "groundkit://auth-callback"
         /** Email links (confirm address, reset password) open the web dashboard, which handles them. */
-        const val WEB_URL = "https://motherduck-aviation-data-analysis.vercel.app/"
+        const val WEB_URL = "https://groundkit-dashboard.harrydatahub.com/"
 
         fun of(url: String, key: String): SupabaseConfig? =
             if (url.startsWith("http") && key.isNotBlank()) SupabaseConfig(url.trimEnd('/'), key.trim()) else null

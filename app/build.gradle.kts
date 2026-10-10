@@ -21,7 +21,7 @@ android {
 
         // The same Vercel deployment the web Dive uses: /api/tables (Parquet) and /api/live.
         buildConfigField(
-            "String", "API_BASE", "\"https://motherduck-aviation-data-analysis.vercel.app\"",
+            "String", "API_BASE", "\"https://groundkit-dashboard.harrydatahub.com\"",
         )
         // GroundKit accounts (optional): the Supabase project URL and publishable key, both
         // public. Set groundkit.supabaseUrl and groundkit.supabaseKey in gradle.properties

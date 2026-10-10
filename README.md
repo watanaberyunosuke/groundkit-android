@@ -1,7 +1,7 @@
 # GroundKit (Android)
 
 An Android app for apron, ramp and cargo staff, built on the same backend as
-[motherduck-aviation-data-analysis](../motherduck-aviation-data-analysis): the MotherDuck
+[groundkit-dashboard](https://github.com/watanaberyunosuke/groundkit-dashboard): the MotherDuck
 warehouse behind its Vercel API. The backend is used unchanged:
 
 - `GET /api/tables/<schema>.<table>`: the allow-listed warehouse tables as Parquet (ZSTD), the same exports the web Dive loads into DuckDB-WASM;
@@ -74,7 +74,7 @@ Settings > Account signs in with Apple, Google or Microsoft (a Custom Tab with P
 - `data/account`: `SupabaseClient` (HttpURLConnection, no SDK), `AccountManager` (session, refresh, sync), `SessionStore` (session encrypted with an Android Keystore key, left out of backups), `SettingsBridge` (app settings to and from the shared keys) and `SyncedSettings` (the shared contract and its per-key merge).
 - To switch it on, set `groundkit.supabaseUrl` and `groundkit.supabaseKey` (the project's publishable key) in `gradle.properties` or `~/.gradle/gradle.properties`. Without them the section is hidden.
 
-The contract, the Supabase setup and known gaps are in the aviation repo's [docs/accounts.md](https://github.com/watanaberyunosuke/motherduck-aviation-data-analysis/blob/main/docs/accounts.md).
+The contract, the Supabase setup and known gaps are in the aviation repo's [docs/accounts.md](https://github.com/watanaberyunosuke/groundkit-dashboard/blob/main/docs/accounts.md).
 
 ## How it is built
 
