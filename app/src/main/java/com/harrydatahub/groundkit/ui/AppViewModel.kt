@@ -8,6 +8,8 @@ import com.harrydatahub.groundkit.data.Airport
 import com.harrydatahub.groundkit.data.AviationApi
 import com.harrydatahub.groundkit.data.FlightFilter
 import com.harrydatahub.groundkit.data.LiveFeed
+import com.harrydatahub.groundkit.data.LiveWeather
+import com.harrydatahub.groundkit.data.LocalWeather
 import com.harrydatahub.groundkit.data.Settings
 import com.harrydatahub.groundkit.data.SettingsStore
 import com.harrydatahub.groundkit.data.Warehouse
@@ -27,6 +29,7 @@ import com.harrydatahub.groundkit.domain.RampAlert
 import com.harrydatahub.groundkit.domain.RampAlerts
 import com.harrydatahub.groundkit.domain.Remembered
 import com.harrydatahub.groundkit.domain.WeatherOverview
+import com.harrydatahub.groundkit.domain.WeatherWords
 import com.harrydatahub.groundkit.domain.windText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -76,6 +79,10 @@ data class UiState(
     val alerts: List<RampAlert> = emptyList(),
     val traffic: Traffic? = null,
     val live: LiveStatus = LiveStatus(),
+    /** Current weather at the airport from Open-Meteo; null until it loads. */
+    val localWeather: LocalWeather? = null,
+    /** True when the conditions' METAR is the live one rather than the hourly copy. */
+    val metarIsLive: Boolean = false,
     val overview: List<WeatherOverview> = emptyList(),
     /** The user's airlines as ICAO designators, resolved from settings. */
     val myAirlines: Set<String> = emptySet(),
@@ -96,6 +103,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var warehouse: Warehouse? = null
     private var snapshot: AirportSnapshot? = null
     private var feed: LiveFeed? = null
+    /** The live METAR, TAF and local weather for the selected airport, fetched with the live feed. */
+    private var weather: LiveWeather? = null
     private val memory = FeedMemory()
     private val directions = DirectionMemory()
 
@@ -152,6 +161,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             memory.clear()
             directions.clear()
             feed = null
+            weather = null
         }
         _state.update { it.copy(live = LiveStatus(loading = true), traffic = null) }
         publish()
@@ -196,8 +206,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (firstLoad && foregroundJob?.isActive == true) viewModelScope.launch { fetchLive() }
     }
 
+    /** The live METAR, TAF and local weather. A failure keeps the last copy; the hourly one still fills in behind it. */
+    private suspend fun fetchWeather(icao: String) {
+        val w = runCatching { api.weather(icao) }.getOrNull() ?: return
+        lock.withLock { if (selectedAirport()?.icao == icao) weather = w }
+    }
+
     private suspend fun fetchLive() {
         val icao = lock.withLock { selectedAirport()?.icao } ?: return
+        viewModelScope.launch {
+            fetchWeather(icao)
+            publish()
+        }
         _state.update { it.copy(live = it.live.copy(loading = true)) }
         try {
             val f = api.live(icao)
@@ -225,7 +245,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val settings = settingsStore.settings.value
         val next = lock.withLock {
             val w = warehouse ?: return@withLock null
-            val snap = snapshotLocked()
+            val base = snapshotLocked()
+            val live = weather?.takeIf { base != null }
+            // The live METAR and TAF over the hourly copy, for every screen and the alerts.
+            val snap = base?.let { it.copy(conditions = WeatherWords.merged(it.conditions, live, it.airport)) }
             val f = feed?.takeIf { snap != null }
             val now = System.currentTimeMillis()
             val traffic = if (snap != null && f != null) {
@@ -251,6 +274,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     AirportChoice(a, c?.flightCategory, c?.takeIf { it.metarRaw != null }?.let(::windText))
                 },
                 snapshot = snap,
+                localWeather = live?.local,
+                metarIsLive = live?.metar != null && snap?.conditions?.metarObservedAt == live.metar.observedAt,
                 alerts = RampAlerts.from(snap?.conditions, settings.gustCautionKt, settings.highWindKt, now),
                 traffic = traffic,
                 overview = Overview.weather7d(w, now),

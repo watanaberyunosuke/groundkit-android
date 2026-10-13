@@ -5,7 +5,8 @@ An Android app for apron, ramp and cargo staff, built on the same backend as
 warehouse behind its Vercel API. The backend is used unchanged:
 
 - `GET /api/tables/<schema>.<table>`: the allow-listed warehouse tables as Parquet (ZSTD), the same exports the web Dive loads into DuckDB-WASM;
-- `GET /api/live/<icao>`: live aircraft within 500 NM (OpenSky, falling back to adsb.lol).
+- `GET /api/live/<icao>`: live aircraft within 500 NM (OpenSky, falling back to adsb.lol);
+- `GET /api/weather/<icao>`: the latest METAR and TAF from aviationweather.gov and current conditions at the airport from Open-Meteo, fetched with each live poll. The live METAR and TAF replace the hourly `fct_airport_conditions` copy when at least as new (`WeatherWords.merged`), for the alerts, *Aviation weather* and the briefing; *At the airport now* shows the Open-Meteo values (model data in 15-minute steps).
 
 The base URL is `API_BASE` in `app/build.gradle.kts`.
 

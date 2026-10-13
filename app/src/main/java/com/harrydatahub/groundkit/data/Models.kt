@@ -143,3 +143,53 @@ data class LiveAircraft(
 )
 
 data class LiveFeed(val at: Long, val source: String, val aircraft: List<LiveAircraft>)
+
+/**
+ * /api/weather/{icao}: the latest METAR and TAF from aviationweather.gov and the current
+ * weather at the airport from Open-Meteo, fetched live by the API (edge-cached for a minute).
+ * Each part is null when its source failed.
+ */
+data class LiveWeather(val at: Long, val metar: LiveMetar?, val taf: LiveTaf?, val local: LocalWeather?)
+
+/** The METAR columns of fct_airport_conditions, from the live METAR. */
+data class LiveMetar(
+    val observedAt: Long,
+    val raw: String?,
+    val flightCategory: String?,
+    val windVariable: Boolean,
+    val windDirDeg: Int?,
+    val windSpeedKt: Int?,
+    val windGustKt: Int?,
+    val visibilitySm: Double?,
+    val visibilityIsLowerBound: Boolean,
+    val ceilingFt: Int?,
+    val wxString: String?,
+    val tempC: Double?,
+    val dewpointC: Double?,
+    val altimeterHpa: Double?,
+)
+
+data class LiveTaf(val issuedAt: Long, val validFrom: Long?, val validTo: Long?, val raw: String?)
+
+/**
+ * Open-Meteo's current conditions at the airport's coordinates: model values in 15-minute
+ * steps, not an observation.
+ */
+data class LocalWeather(
+    val observedAt: Long,
+    /** WMO weather code in words ("Light rain"); null for a code the API doesn't know. */
+    val conditions: String?,
+    val weatherCode: Int?,
+    val isDay: Boolean,
+    val tempC: Double?,
+    val feelsLikeC: Double?,
+    val humidityPct: Int?,
+    val dewpointC: Double?,
+    /** Over the last 15 minutes. */
+    val precipitationMm: Double?,
+    val cloudCoverPct: Int?,
+    val pressureHpa: Double?,
+    val windDirDeg: Int?,
+    val windSpeedKt: Int?,
+    val windGustKt: Int?,
+)

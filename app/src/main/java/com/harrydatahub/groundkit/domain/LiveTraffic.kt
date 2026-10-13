@@ -43,11 +43,19 @@ data class PlacedAircraft(
     val tracked get() = placement == Placement.INBOUND || placement == Placement.OUTBOUND
 }
 
+/** "On time", "20 min late", "3 h 5 min early", as on iOS. */
 fun ragText(delayMin: Double?): String = when {
     delayMin == null -> "No usual time"
-    delayMin < -15 -> "Early ${(-delayMin).roundToInt()} min"
+    delayMin < -15 -> "${minutesText((-delayMin).roundToInt())} early"
     delayMin < 15 -> "On time"
-    else -> "Late ${delayMin.roundToInt()} min"
+    else -> "${minutesText(delayMin.roundToInt())} late"
+}
+
+/** "45 min", "2 h", "2 h 5 min". */
+fun minutesText(min: Int): String = when {
+    min < 60 -> "$min min"
+    min % 60 == 0 -> "${min / 60} h"
+    else -> "${min / 60} h ${min % 60} min"
 }
 
 /** ICAO callsign to IATA flight number: QFA627 -> QF627, as stg_opensky_flights does. */
@@ -290,7 +298,7 @@ object LiveTraffic {
                 callsign, dir, a.label, a.flightIata, seen.otherIata, hhmm(seen.usualMin), true, a.distNm,
                 eventAt = null,
                 rag = if (dir == Dir.OUTBOUND) ragOf(late ?: 0.0) else Rag.UNKNOWN,
-                statusNote = if (late != null && late >= 15) "Late ${late.roundToInt()} min" else null,
+                statusNote = if (late != null && late >= 15) "${minutesText(late.roundToInt())} late" else null,
                 aircraft = a,
             )
         }
