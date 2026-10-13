@@ -155,7 +155,7 @@ private fun TurnaroundList(vm: TurnaroundViewModel, here: List<Turnaround>, snap
                 item {
                     EmptyState(
                         if (showClosed) "Closed turnarounds at ${snap.airport.iata} appear here."
-                        else "No active turnarounds. Start one from a flight on the Flights tab, or add one.",
+                        else "No active turnarounds. Tap a flight on the Flights tab and choose Start turnaround, or start one with the + button.",
                     )
                 }
             }

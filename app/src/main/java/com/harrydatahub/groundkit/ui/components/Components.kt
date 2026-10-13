@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -215,12 +217,58 @@ fun InfoTile(label: String, value: String, modifier: Modifier = Modifier, valueC
     }
 }
 
+/** One reading in a [TileGrid]: "Wind", "280° 5 kt", "From the west". */
+data class Reading(val label: String, val value: String, val icon: ImageVector, val detail: String? = null, val valueColor: Color? = null)
+
+/**
+ * Readings two to a row. Each row is as tall as its tallest tile, so the tiles line up
+ * whatever their text.
+ */
+@Composable
+fun TileGrid(readings: List<Reading>, modifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        readings.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { ReadingTile(it, Modifier.weight(1f).fillMaxHeight()) }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReadingTile(r: Reading, modifier: Modifier) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
+            .padding(12.dp)
+            .semantics(mergeDescendants = true) {},
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(r.icon, contentDescription = null, tint = muted, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(r.label, style = MaterialTheme.typography.labelLarge, color = muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            r.value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+            color = r.valueColor ?: MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis,
+        )
+        r.detail?.takeIf { it.isNotBlank() }?.let {
+            Text(it, style = MaterialTheme.typography.bodyMedium, color = muted)
+        }
+    }
+}
+
 /** A row of equal-width tiles. */
 @Composable
 fun TileRow(vararg tiles: Pair<String, String>, colors: List<Color?> = emptyList()) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         tiles.forEachIndexed { i, (label, value) ->
-            InfoTile(label, value, Modifier.weight(1f), colors.getOrNull(i))
+            InfoTile(label, value, Modifier.weight(1f).fillMaxHeight(), colors.getOrNull(i))
         }
     }
 }
@@ -309,7 +357,7 @@ fun NoAlertsCard() {
     ) {
         Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = green, modifier = Modifier.size(28.dp))
         Spacer(Modifier.width(12.dp))
-        Text("No weather alerts from the latest METAR", style = MaterialTheme.typography.bodyLarge)
+        Text("No weather hazards on the ramp", style = MaterialTheme.typography.bodyLarge)
     }
 }
 
@@ -397,7 +445,12 @@ fun FlightRow(
             )
             Text(item.timeLabel, style = MaterialTheme.typography.labelMedium, color = muted)
             if (!item.muted && item.time != null) {
-                Text(Fmt.relative(item.time, now), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                // An airborne arrival past its estimate is still coming in, not "2 min ago".
+                val airborne = item.timeLabel == "ETA" && item.aircraft?.live?.onGround == false
+                Text(
+                    if (airborne && item.time <= now) "landing now" else Fmt.relative(item.time, now),
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+                )
             }
         }
         Spacer(Modifier.width(12.dp))
@@ -425,7 +478,7 @@ fun FlightRow(
                 }
                 Spacer(Modifier.weight(1f))
                 Text(
-                    (if (item.dir == Dir.INBOUND) "from " else "to ") + (item.other ?: "–"),
+                    item.other?.let { (if (item.dir == Dir.INBOUND) "from " else "to ") + it }.orEmpty(),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
                 )

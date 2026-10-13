@@ -18,7 +18,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.FilterDrama
+import androidx.compose.material.icons.filled.NightsStay
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Thermostat
+import androidx.compose.material.icons.filled.Thunderstorm
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.WbCloudy
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material3.Card
@@ -39,24 +49,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.harrydatahub.groundkit.data.FlightFilter
+import com.harrydatahub.groundkit.data.LocalWeather
+import com.harrydatahub.groundkit.domain.AlertLevel
+import com.harrydatahub.groundkit.domain.HeatStress
+import com.harrydatahub.groundkit.domain.WeatherWords
 import com.harrydatahub.groundkit.data.Notam
 import com.harrydatahub.groundkit.domain.AirportSnapshot
 import com.harrydatahub.groundkit.domain.Placement
-import com.harrydatahub.groundkit.domain.ceilingText
-import com.harrydatahub.groundkit.domain.visText
-import com.harrydatahub.groundkit.domain.windText
 import com.harrydatahub.groundkit.ui.FlightBoards
 import com.harrydatahub.groundkit.ui.FlightItem
 import com.harrydatahub.groundkit.ui.Fmt
 import com.harrydatahub.groundkit.ui.UiState
 import com.harrydatahub.groundkit.ui.components.AlertCard
-import com.harrydatahub.groundkit.ui.components.CategoryBadge
 import com.harrydatahub.groundkit.ui.components.EmptyState
 import com.harrydatahub.groundkit.ui.components.FlightRow
 import com.harrydatahub.groundkit.ui.components.NoAlertsCard
+import com.harrydatahub.groundkit.ui.components.Reading
+import com.harrydatahub.groundkit.ui.components.TileGrid
 import com.harrydatahub.groundkit.ui.components.SectionCard
-import com.harrydatahub.groundkit.ui.components.TileRow
-import com.harrydatahub.groundkit.ui.components.WindCompass
 import com.harrydatahub.groundkit.ui.map.MapScreen
 import java.time.ZoneOffset
 import kotlin.math.roundToInt
@@ -83,8 +93,8 @@ fun NowScreen(
     val arrivals = traffic?.let { FlightBoards.arrivals(snap, it, filter, state.myAirlines) }
     val departures = traffic?.let { FlightBoards.departures(snap, it, filter, state.myAirlines) }
     // Next up: live flights first, then regular flights by usual time.
-    val nextArrivals = arrivals?.let { it[0].items + it[2].items }?.take(4)
-    val nextDepartures = departures?.let { it[0].items + it[2].items }?.take(4)
+    val nextArrivals = arrivals?.let { it[0].items + it[2].items }?.take(4)?.sortedBy { it.time ?: Long.MAX_VALUE }
+    val nextDepartures = departures?.let { it[0].items + it[2].items }?.take(4)?.sortedBy { it.time ?: Long.MAX_VALUE }
     val filterNote = when (filter) {
         FlightFilter.ALL -> null
         FlightFilter.MINE -> "My airlines only"
@@ -96,19 +106,13 @@ fun NowScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { Clocks(snap, now) }
-        if (state.alerts.isEmpty()) {
-            if (snap.conditions?.metarRaw != null) item { NoAlertsCard() }
-        } else {
-            items(state.alerts) { AlertCard(it) }
+        // The all-clear whenever nothing needs care, with any notes (rain, old weather) under it.
+        if (snap.conditions?.metarRaw != null && state.alerts.none { it.level >= AlertLevel.CAUTION }) {
+            item { NoAlertsCard() }
         }
-        item { WeatherGlance(snap, now, onSeeWeather) }
-        item { MapPreview(state, onOpenMap) }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                PageLink(Icons.Filled.Map, "Airport map: stands, gates, routes", onOpenAirportMap)
-                PageLink(Icons.Filled.Cloud, "Briefing: METAR, TAF, NOTAMs, traffic", onOpenBriefing)
-            }
-        }
+        items(state.alerts) { AlertCard(it) }
+        item { AviationWeather(snap, now, state.metarIsLive, onSeeWeather) }
+        state.localWeather?.let { w -> item { LocalWeatherCard(w, snap) } }
         item {
             NextFlights(
                 "Next arrivals", filterNote, nextArrivals, snap, now, state.live.error, onFlight, onSeeArrivals,
@@ -120,6 +124,13 @@ fun NowScreen(
                 "Next departures", filterNote, nextDepartures, snap, now, state.live.error, onFlight, onSeeDepartures,
                 "See all departures",
             )
+        }
+        item { MapPreview(state, onOpenMap) }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PageLink(Icons.Filled.Map, "Airport map: stands, gates, routes", onOpenAirportMap)
+                PageLink(Icons.Filled.Cloud, "Briefing: METAR, TAF, NOTAMs, traffic", onOpenBriefing)
+            }
         }
         item { AirsideNotams(snap, onSeeNotams) }
         item { LiveFooter(state, snap) }
@@ -150,45 +161,89 @@ private fun Clock(label: String, time: String, sub: String, modifier: Modifier, 
     }
 }
 
+/** The latest METAR as plain readings: what the airport is reporting for aircraft. */
 @Composable
-private fun WeatherGlance(snap: AirportSnapshot, now: Long, onClick: () -> Unit) {
+private fun AviationWeather(snap: AirportSnapshot, now: Long, live: Boolean, onClick: () -> Unit) {
     val c = snap.conditions
     SectionCard(
-        title = "Weather now",
-        subtitle = c?.metarObservedAt?.let { "METAR ${Fmt.zulu(it)}, ${Fmt.age(it, now)}" },
-        modifier = Modifier.clickable(onClick = onClick),
-        trailing = { c?.flightCategory?.let { CategoryBadge(it, large = true) } },
+        title = "Aviation weather",
+        subtitle = c?.metarObservedAt?.let {
+            "METAR ${Fmt.zulu(it)}, ${Fmt.age(it, now)}" + if (live) "" else " (hourly copy)"
+        },
+        modifier = Modifier.clickable(onClickLabel = "Open the briefing", onClick = onClick),
     ) {
         if (c?.metarRaw == null) {
             EmptyState("No METAR for ${snap.airport.iata} yet.")
             return@SectionCard
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            WindCompass(c, 76.dp)
-            Spacer(Modifier.width(14.dp))
-            Column {
-                Text(windText(c), style = MaterialTheme.typography.headlineSmall)
-                Text(
+        val gust = maxOf(c.windSpeedKt ?: 0, c.windGustKt ?: 0)
+        val status = com.harrydatahub.groundkit.ui.theme.LocalStatusColors.current
+        val feelsLike = c.tempC?.let { HeatStress.feelsLikeC(it, c.dewpointC, c.windSpeedKt) }
+        TileGrid(
+            listOf(
+                Reading(
+                    "Wind", WeatherWords.wind(c.windDirDeg, c.windVariable, c.windSpeedKt, c.windGustKt), Icons.Filled.Air,
+                    if (c.windVariable) "Changing direction" else c.windDirDeg?.let { "From ${WeatherWords.compassName(it)}" },
                     when {
-                        c.windGustKt != null -> "Gusting ${c.windGustKt} kt"
-                        c.windVariable -> "Variable direction"
-                        else -> "Surface wind"
+                        gust >= 40 -> status.red
+                        gust >= 25 -> status.amber
+                        else -> null
                     },
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        TileRow(
-            "Visibility" to visText(c),
-            "Ceiling" to ceilingText(c),
-            "Temp" to (c.tempC?.let { "${it.roundToInt()}°C" } ?: "–"),
-            "QNH" to (c.altimeterHpa?.let { "${it.roundToInt()}" } ?: "–"),
+                ),
+                Reading(
+                    "Visibility", WeatherWords.visibility(c.visibilitySm, c.visibilityIsLowerBound), Icons.Filled.Visibility,
+                    WeatherWords.category(c.flightCategory),
+                ),
+                Reading("Weather", WeatherWords.describe(c.wxString) ?: "Nothing significant", Icons.Filled.WbCloudy),
+                Reading(
+                    "Cloud ceiling", c.ceilingFt?.let { "%,d ft".format(java.util.Locale.UK, it) } ?: "None", Icons.Filled.FilterDrama,
+                    if (c.ceilingFt == null) "No broken or overcast layer" else "Lowest broken or overcast layer",
+                ),
+                Reading(
+                    "Temperature", WeatherWords.temp(c.tempC), Icons.Filled.Thermostat,
+                    listOfNotNull(
+                        c.dewpointC?.let { "Dew point ${WeatherWords.temp(it)}" },
+                        feelsLike?.let { "feels like ${WeatherWords.temp(it)}" },
+                    ).joinToString(", "),
+                ),
+                Reading("Pressure", WeatherWords.pressure(c.altimeterHpa), Icons.Filled.Speed, "QNH, for altimeters"),
+            ),
         )
-        c.wxString?.let {
-            Spacer(Modifier.height(8.dp))
-            Text("Weather: $it", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+/** Current weather at the airport's coordinates from Open-Meteo: what it feels like outside. */
+@Composable
+private fun LocalWeatherCard(w: LocalWeather, snap: AirportSnapshot) {
+    SectionCard(
+        title = "At the airport now",
+        subtitle = "Open-Meteo forecast model, ${Fmt.hm(w.observedAt, snap.zone)} ${snap.airport.iata} time",
+    ) {
+        val sky = when (w.weatherCode ?: -1) {
+            0, 1, 2 -> if (w.isDay) Icons.Filled.WbSunny else Icons.Filled.NightsStay
+            in 51..67, in 80..82 -> Icons.Filled.WaterDrop
+            in 95..99 -> Icons.Filled.Thunderstorm
+            else -> Icons.Filled.Cloud
         }
+        TileGrid(
+            listOf(
+                Reading("Sky", w.conditions ?: "–", sky, w.cloudCoverPct?.let { "Cloud cover $it%" }),
+                Reading(
+                    "Feels like", WeatherWords.temp(w.feelsLikeC ?: w.tempC), Icons.Filled.Thermostat,
+                    listOfNotNull(w.tempC?.let { "Air ${WeatherWords.temp(it)}" }, w.humidityPct?.let { "humidity $it%" })
+                        .joinToString(", "),
+                ),
+                Reading(
+                    "Wind", WeatherWords.wind(w.windDirDeg, false, w.windSpeedKt, w.windGustKt), Icons.Filled.Air,
+                    w.windDirDeg?.let { "From ${WeatherWords.compassName(it)}" },
+                ),
+                Reading(
+                    "Rain",
+                    w.precipitationMm?.let { if (it < 0.05) "None" else "%.1f mm".format(java.util.Locale.ROOT, it) } ?: "–",
+                    Icons.Filled.WaterDrop, "Last 15 minutes",
+                ),
+            ),
+        )
     }
 }
 
@@ -207,7 +262,7 @@ private fun NextFlights(
     SectionCard(title = title, subtitle = filterNote) {
         when {
             items == null -> EmptyState(liveError?.let { "Live positions unavailable: $it" } ?: "Loading live traffic…")
-            items.isEmpty() -> EmptyState("Nothing recognised in the next few hours.")
+            items.isEmpty() -> EmptyState("No regular flights expected in the next few hours.")
             else -> Column {
                 items.forEachIndexed { i, item ->
                     if (i > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -249,7 +304,11 @@ private fun MapPreview(state: UiState, onOpen: () -> Unit) {
         }
         Spacer(Modifier.height(6.dp))
         Text(
-            "$inbound inbound · $outbound outbound within 500 NM",
+            when {
+                state.traffic == null -> if (state.live.error != null) "Live aircraft unavailable" else "Loading live aircraft…"
+                inbound + outbound == 0 -> "No aircraft heading in or out within 500 NM"
+                else -> "$inbound flying in and $outbound flying out within 500 NM"
+            },
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

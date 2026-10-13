@@ -27,6 +27,8 @@ object RampAlerts {
         val wx = c.wxString.orEmpty().uppercase()
         val codes = wx.split(' ').filter { it.isNotBlank() }
         fun has(code: String) = codes.any { code in it }
+        // "Light rain showers, mist" rather than "-SHRA BR".
+        val reported = "METAR reports ${(WeatherWords.describe(c.wxString) ?: wx).replaceFirstChar { it.lowercase() }}"
         val alerts = mutableListOf<RampAlert>()
 
         if (has("TS")) {
@@ -34,20 +36,20 @@ object RampAlerts {
             alerts += RampAlert(
                 AlertLevel.WARNING, AlertKind.THUNDERSTORM,
                 if (vicinity) "Thunderstorm in the vicinity" else "Thunderstorm at the airport",
-                "METAR reports $wx. Follow your lightning and ramp-closure procedure.",
+                "$reported. Follow your lightning and ramp-closure procedure.",
             )
         }
         if (has("GR") || has("GS")) {
-            alerts += RampAlert(AlertLevel.WARNING, AlertKind.THUNDERSTORM, "Hail reported", "METAR reports $wx. Shelter staff and protect equipment.")
+            alerts += RampAlert(AlertLevel.WARNING, AlertKind.THUNDERSTORM, "Hail reported", "$reported. Shelter staff and protect equipment.")
         }
         if (has("SQ") || has("FC")) {
-            alerts += RampAlert(AlertLevel.WARNING, AlertKind.WIND, "Squall reported", "METAR reports $wx. Expect sudden strong winds.")
+            alerts += RampAlert(AlertLevel.WARNING, AlertKind.WIND, "Squall reported", "$reported. Expect sudden strong winds.")
         }
 
         val speed = c.windSpeedKt ?: 0
         val gust = c.windGustKt
         val peak = maxOf(speed, gust ?: 0)
-        val windDesc = windText(c)
+        val windDesc = WeatherWords.wind(c.windDirDeg, c.windVariable, c.windSpeedKt, c.windGustKt)
         when {
             peak >= highWindKt -> alerts += RampAlert(
                 AlertLevel.WARNING, AlertKind.WIND, "High wind $peak kt",
@@ -64,11 +66,11 @@ object RampAlerts {
         when {
             has("FZ") -> alerts += RampAlert(
                 AlertLevel.WARNING, AlertKind.FREEZING, "Freezing ${if (has("FG")) "fog" else "precipitation"}",
-                "METAR reports $wx. Icing likely: slippery surfaces, de-icing may be needed.",
+                "$reported. Icing likely: slippery surfaces, de-icing may be needed.",
             )
             has("SN") || has("SG") || has("PL") -> alerts += RampAlert(
                 AlertLevel.CAUTION, AlertKind.FREEZING, "Snow or ice pellets",
-                "METAR reports $wx. Slippery surfaces; check de-icing.",
+                "$reported. Slippery surfaces; check de-icing.",
             )
             temp != null && temp <= 0 -> alerts += RampAlert(
                 AlertLevel.CAUTION, AlertKind.FREEZING, "Below freezing (${temp.roundToInt()}°C)",
@@ -83,11 +85,11 @@ object RampAlerts {
         when (c.flightCategory) {
             "LIFR" -> alerts += RampAlert(
                 AlertLevel.WARNING, AlertKind.VISIBILITY, "Low visibility (LIFR)",
-                "${visText(c)} visibility, ceiling ${ceilingText(c)}. Low-visibility procedures may be in force: extra care airside.",
+                "Visibility ${visText(c)}, ceiling ${ceilingText(c)}. Low-visibility procedures may be in force: extra care airside.",
             )
             "IFR" -> alerts += RampAlert(
                 AlertLevel.CAUTION, AlertKind.VISIBILITY, "Reduced visibility (IFR)",
-                "${visText(c)} visibility, ceiling ${ceilingText(c)}.",
+                "Visibility ${visText(c)}, ceiling ${ceilingText(c)}.",
             )
         }
 
@@ -115,30 +117,35 @@ object RampAlerts {
             )
         }
         if (has("DS") || has("SS") || has("SA") || has("DU")) {
-            alerts += RampAlert(AlertLevel.CAUTION, AlertKind.DUST, "Dust or sand", "METAR reports $wx. Eye protection; cover open holds and ULDs.")
+            alerts += RampAlert(AlertLevel.CAUTION, AlertKind.DUST, "Dust or sand", "$reported. Eye protection; cover open holds and ULDs.")
         }
         if (precip && alerts.none { it.kind == AlertKind.FREEZING }) {
             alerts += RampAlert(
                 AlertLevel.INFO, AlertKind.PRECIPITATION, if (has("+")) "Heavy rain" else "Rain",
-                "METAR reports $wx. Wet surfaces; protect baggage and cargo.",
+                "$reported. Wet surfaces; protect baggage and cargo.",
             )
         }
 
         c.metarObservedAt?.let { observed ->
             val age = ((now - observed) / MINUTE_MS).toInt()
-            // The pipeline loads METARs twice a day, so an old report is normal, not an
-            // alarm; it is still worth saying so staff check ATIS before relying on it.
+            // METARs are half-hourly or hourly and the app fetches the latest live, so an
+            // old one means the station or the feed has stopped reporting.
             if (age > STALE_AFTER_MIN) {
                 alerts += RampAlert(
-                    AlertLevel.INFO, AlertKind.STALE, "Latest METAR is ${ageText(age)} old",
-                    "Weather is loaded twice a day. Check ATIS or ops for current conditions.",
+                    AlertLevel.INFO, AlertKind.STALE, "Weather is ${ageText(age)} old",
+                    "The latest METAR is older than usual, so these alerts may be out of date. Check ATIS or ops for current conditions.",
                 )
             }
         }
         return alerts.sortedByDescending { it.level }
     }
 
-    private fun ageText(min: Int) = if (min < 120) "$min min" else "${min / 60} h"
+    /** "45 min", "2 h 5 min", as on iOS. */
+    private fun ageText(min: Int) = when {
+        min < 60 -> "$min min"
+        min % 60 == 0 -> "${min / 60} h"
+        else -> "${min / 60} h ${min % 60} min"
+    }
 }
 
 // ---- Shared METAR text, as the web Dive formats it --------------------------------------
@@ -151,13 +158,6 @@ fun windText(c: Conditions): String {
 }
 
 /** AWC reports statute miles; "6+" (a lower bound) is 10 km or more in ICAO terms. */
-fun visText(c: Conditions): String = when {
-    c.visibilitySm == null -> "–"
-    c.visibilityIsLowerBound -> "10 km+"
-    else -> {
-        val km = c.visibilitySm * 1.609
-        if (km < 5) "${(km * 1000 / 50).roundToInt() * 50} m" else "%.1f km".format(java.util.Locale.ROOT, km)
-    }
-}
+fun visText(c: Conditions): String = WeatherWords.visibility(c.visibilitySm, c.visibilityIsLowerBound)
 
 fun ceilingText(c: Conditions): String = c.ceilingFt?.let { "%,d ft".format(java.util.Locale.ROOT, it) } ?: "none"

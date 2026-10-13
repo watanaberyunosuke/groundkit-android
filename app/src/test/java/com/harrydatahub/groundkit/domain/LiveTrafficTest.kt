@@ -150,7 +150,7 @@ class LiveTrafficTest {
         assertEquals(Rag.GREEN, board.getValue("CPA100").rag)
         assertNull(board.getValue("CPA100").statusNote)
         assertEquals(Rag.AMBER, board.getValue("CPA200").rag)
-        assertEquals("Late 40 min", board.getValue("CPA200").statusNote)
+        assertEquals("40 min late", board.getValue("CPA200").statusNote)
     }
 
     @Test

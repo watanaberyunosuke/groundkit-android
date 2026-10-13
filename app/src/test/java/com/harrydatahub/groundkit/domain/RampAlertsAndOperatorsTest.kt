@@ -73,7 +73,7 @@ class RampAlertsAndOperatorsTest {
     fun windAndVisibilityText() {
         assertEquals("240° 18 kt G28", windText(metar(wind = 18, gust = 28)))
         assertEquals("Calm", windText(metar(wind = 0)))
-        assertEquals("10 km+", visText(metar()))
+        assertEquals("10 km or more", visText(metar()))
     }
 
     @Test

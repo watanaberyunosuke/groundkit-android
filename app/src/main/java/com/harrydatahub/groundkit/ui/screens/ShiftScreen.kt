@@ -13,6 +13,8 @@ import com.harrydatahub.groundkit.domain.HeatStrain
 import com.harrydatahub.groundkit.domain.Level
 import com.harrydatahub.groundkit.domain.WorkSpan
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -123,11 +125,11 @@ fun ShiftScreen(
             if (lastEnded?.summary != null && now - (lastEnded.endedAt ?: 0) < SUMMARY_SHOWN_MS) {
                 item { SummaryCard(lastEnded, snap.zone) }
             }
-            item { FatigueCard(fatigue, health, onDuty = false, onConnect = connect) }
+            // The action first, then the fit-for-duty check.
             item {
-                SectionCard("Not on shift") {
+                SectionCard("Ready to start?") {
                     Text(
-                        "Start a shift to track time on the ramp, water, and steps and heart rate from Health Connect.",
+                        "Starting a shift keeps track of your time on the ramp, breaks and water, with steps and heart rate from Health Connect.",
                         style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(12.dp))
@@ -136,6 +138,7 @@ fun ShiftScreen(
                     }
                 }
             }
+            item { FatigueCard(fatigue, health, onDuty = false, onConnect = connect) }
         } else {
             strain?.let { item { FindingBanner(it) } }
             item { ShiftClock(shift, snap.zone, now, onBreak = vm::logBreak) }
@@ -264,18 +267,18 @@ private fun FindingBanner(f: Finding) {
 private fun FatigueCard(f: Fatigue.Summary, health: HealthState, onDuty: Boolean, onConnect: () -> Unit) {
     val sleepAllowed = HealthService.READ_SLEEP in health.granted
     SectionCard("Fatigue", subtitle = if (onDuty) "Sleep in the 24 and 48 h before this shift" else "Before you start: sleep in the last 24 and 48 h") {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            InfoTile("Sleep, 24 h", f.sleep24hMs?.let(::hm) ?: "–", Modifier.weight(1f))
-            InfoTile("Sleep, 48 h", f.sleep48hMs?.let(::hm) ?: "–", Modifier.weight(1f))
+        Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            InfoTile("Sleep, last 24 h", f.sleep24hMs?.let(::hm) ?: "Not recorded", Modifier.weight(1f).fillMaxHeight())
+            InfoTile("Sleep, last 48 h", f.sleep48hMs?.let(::hm) ?: "Not recorded", Modifier.weight(1f).fillMaxHeight())
         }
         Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            InfoTile("Awake for", f.awakeMs?.let(::hm) ?: "–", Modifier.weight(1f))
-            InfoTile(if (onDuty) "Rest before shift" else "Rest since shift", f.restMs?.let(::hm) ?: "–", Modifier.weight(1f))
+        Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            InfoTile("Awake for", f.awakeMs?.let(::hm) ?: "Needs sleep data", Modifier.weight(1f).fillMaxHeight())
+            InfoTile(if (onDuty) "Rest before shift" else "Rest since last shift", f.restMs?.let(::hm) ?: "No earlier shift", Modifier.weight(1f).fillMaxHeight())
         }
         Spacer(Modifier.height(8.dp))
         Text(
-            "${hm(f.weekMs)} worked in the last 7 days.",
+            if (f.weekMs < 60_000) "No shifts logged in the last 7 days." else "${hm(f.weekMs)} worked in the last 7 days.",
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (f.findings.isNotEmpty()) {
@@ -306,29 +309,29 @@ private fun SummaryCard(shift: Shift, zone: ZoneId) {
     val m = shift.summary ?: return
     val end = shift.endedAt ?: return
     SectionCard("Shift summary", subtitle = "${Fmt.hm(shift.startedAt, zone)}–${Fmt.hm(end, zone)} at ${shift.airportIcao}") {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            InfoTile("On shift", Fmt.duration((shift.durationMs(end) / 60_000).toInt()), Modifier.weight(1f))
+        Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            InfoTile("On shift", Fmt.duration((shift.durationMs(end) / 60_000).toInt()), Modifier.weight(1f).fillMaxHeight())
             InfoTile(
                 "Breaks", "${m.breaks}" + " · longest stretch ${Fmt.duration((m.longestWithoutBreakMs / 60_000).toInt())}",
-                Modifier.weight(1f),
+                Modifier.weight(1f).fillMaxHeight(),
             )
         }
         Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             InfoTile(
                 "Water", "${m.waterMl.roundToInt()}" + (m.waterTargetMl?.let { " of ${(ceil(it / 50) * 50).toInt()}" } ?: "") + " ml",
-                Modifier.weight(1f),
+                Modifier.weight(1f).fillMaxHeight(),
             )
             InfoTile(
                 "Steps",
                 m.steps?.let { Fmt.thousands(it) + (m.distanceKm?.let { km -> " · %.1f km".format(java.util.Locale.ROOT, km) } ?: "") } ?: "–",
-                Modifier.weight(1f),
+                Modifier.weight(1f).fillMaxHeight(),
             )
         }
         Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            InfoTile("Heart rate, avg · peak", heartRates(m.heartRateAverage, m.heartRateMax), Modifier.weight(1f))
-            InfoTile("Active energy", m.activeKcal?.let { "${it.roundToInt()} kcal" } ?: "–", Modifier.weight(1f))
+        Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            InfoTile("Heart rate, avg · peak", heartRates(m.heartRateAverage, m.heartRateMax), Modifier.weight(1f).fillMaxHeight())
+            InfoTile("Active energy", m.activeKcal?.let { "${it.roundToInt()} kcal" } ?: "–", Modifier.weight(1f).fillMaxHeight())
         }
         val target = m.waterTargetMl
         val notes = buildList {
@@ -346,7 +349,7 @@ private fun SummaryCard(shift: Shift, zone: ZoneId) {
 private fun hm(ms: Long) = Fmt.duration((ms / 60_000).toInt())
 
 private fun heartRates(avg: Long?, max: Long?) = when {
-    avg == null && max == null -> "–"
+    avg == null && max == null -> "No readings"
     else -> "${avg ?: "–"} · ${max ?: "–"} bpm"
 }
 
@@ -425,18 +428,18 @@ private fun HealthCard(health: HealthState, onConnect: () -> Unit, onInstall: ()
         }
         else -> SectionCard("This shift", subtitle = "From Health Connect, updated every 2 minutes") {
             val s = health.stats
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 InfoTile(
                     "Steps",
-                    s.steps?.let { Fmt.thousands(it) + (s.distanceKm?.let { km -> " · %.1f km".format(java.util.Locale.ROOT, km) } ?: "") } ?: "–",
-                    Modifier.weight(1f),
+                    s.steps?.let { Fmt.thousands(it) + (s.distanceKm?.let { km -> " · %.1f km".format(java.util.Locale.ROOT, km) } ?: "") } ?: "None yet",
+                    Modifier.weight(1f).fillMaxHeight(),
                 )
-                InfoTile("Active energy", s.activeKcal?.let { "${it.roundToInt()} kcal" } ?: "–", Modifier.weight(1f))
+                InfoTile("Active energy", s.activeKcal?.let { "${it.roundToInt()} kcal" } ?: "None yet", Modifier.weight(1f).fillMaxHeight())
             }
             Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                InfoTile("Heart rate", s.heartRateLatest?.let { "$it bpm" } ?: "–", Modifier.weight(1f))
-                InfoTile("Average · peak", heartRates(s.heartRateAverage, s.heartRateMax), Modifier.weight(1f))
+            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                InfoTile("Heart rate", s.heartRateLatest?.let { "$it bpm" } ?: "No reading", Modifier.weight(1f).fillMaxHeight())
+                InfoTile("Average · peak", heartRates(s.heartRateAverage, s.heartRateMax), Modifier.weight(1f).fillMaxHeight())
             }
             if (health.missing.isNotEmpty()) {
                 TextButton(onClick = onConnect, modifier = Modifier.heightIn(min = 48.dp)) {

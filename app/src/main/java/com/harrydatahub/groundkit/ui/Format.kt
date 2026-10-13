@@ -35,7 +35,7 @@ object Fmt {
         return "UTC${if (secs < 0) "−" else "+"}$h${if (m != 0) ":%02d".format(Locale.ROOT, m) else ""}"
     }
 
-    /** "in 12 min", "now", "8 min ago", "in 1 h 05". */
+    /** "in 12 min", "now", "8 min ago", "in 1 h 5 min". */
     fun relative(target: Long, now: Long): String {
         val min = ((target - now) / 60_000.0).roundToInt()
         return when {
@@ -45,8 +45,8 @@ object Fmt {
         }
     }
 
-    fun duration(minutes: Int): String =
-        if (minutes < 60) "$minutes min" else "${minutes / 60} h ${"%02d".format(Locale.ROOT, minutes % 60)}"
+    /** "45 min", "2 h", "1 h 5 min", as on iOS. */
+    fun duration(minutes: Int): String = com.harrydatahub.groundkit.domain.minutesText(minutes)
 
     fun age(epochMs: Long, now: Long): String {
         val min = ((now - epochMs) / 60_000).toInt()
