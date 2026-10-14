@@ -208,7 +208,7 @@ private fun SignInSheet(onDismiss: () -> Unit) {
                 ) { Text("Forgot password?") }
             } else {
                 Text(
-                    "We send a link to confirm your address. See the privacy policy at groundkit.harrydatahub.com/privacy.",
+                    "We send a link to confirm your address. See the privacy policy at getgroundkit.com/privacy.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
