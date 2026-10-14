@@ -1,0 +1,24 @@
+GroundKit is for apron, ramp and cargo staff. It shows what is coming into and leaving your airport, the weather that matters on the ramp, and keeps track of turnarounds and your shift.
+
+<b>Now</b>
+Airport local time and UTC, ramp weather alerts, wind, visibility, temperature and QNH, a live airspace map, the next arrivals and departures, and airside NOTAMs.
+
+<b>Flights</b>
+Arrivals inbound now with ETA, countdown and delay status, landed and on the ground, and flights due in the next 6 hours. Departures on the ground, due out, departed and coming up. Filter to the airlines you handle.
+
+<b>Turnarounds</b>
+A checklist per flight: chocks, cones, GPU, holds, bags and cargo, fuelling, catering, cleaning, water, NOTOC (with dangerous goods only), loadsheet and pushback. One tap stamps the time. Bag and ULD counters, stand, registration, notes and a countdown to the target off-block time.
+
+<b>Shift</b>
+Time on shift and since your last break, water logged against a target that rises with the heat, fatigue checks from sleep and hours worked, and heat-strain warnings from heart rate. Steps, distance, active energy and heart rate are read from Health Connect, only for the types you allow. Handover notes for the next crew.
+
+<b>Map and briefing</b>
+The airport layout from OpenStreetMap with runways, taxiways, stands, gates and service roads, search, and a route there by road. Decoded METAR and TAF, a 72-hour wind chart, 7-day weather, NOTAMs and 30-day traffic.
+
+<b>Built for outdoor use</b>
+Large type and touch targets, status shown as icon, word and colour, high-contrast light and dark themes, a theme that goes dark at sunset, and an optional keep-screen-on setting. Every download is kept on the device, so the app opens with the last data when there is no signal.
+
+Weather alerts, fatigue and heat guidance are advisories only. Local procedures, rosters and supervisors take precedence. The map is volunteer-mapped; follow the airport's charts, markings and airside driving rules.
+
+<b>Network services</b>
+Flight, weather and NOTAM data come from the GroundKit API (groundkit-dashboard.harrydatahub.com), which draws on OpenSky, adsb.lol, aviationweather.gov and Open-Meteo. Map tiles come from Esri and the airport layout from the OpenStreetMap Overpass API. An optional account (email or Google sign-in, through Supabase) syncs a few settings with the iOS app and the web dashboard. Location is used only while a map is on screen and is not stored or sent anywhere.

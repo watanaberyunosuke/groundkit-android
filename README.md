@@ -1,5 +1,13 @@
 # GroundKit (Android)
 
+## License
+
+Copyright 2026 Harry Watson.
+
+GroundKit for Android is licensed under the [Apache License, Version 2.0](LICENSE)
+(SPDX: `Apache-2.0`). Third-party libraries, services and data retain their own
+licenses and terms.
+
 An Android app for apron, ramp and cargo staff, built on the same backend as
 [groundkit-dashboard](https://github.com/watanaberyunosuke/groundkit-dashboard): the MotherDuck
 warehouse behind its Vercel API. The backend is used unchanged:
@@ -91,6 +99,15 @@ The contract, the Supabase setup and known gaps are in the aviation repo's [docs
 ./gradlew :app:assembleDebug        # app/build/outputs/apk/debug/app-debug.apk
 ./gradlew :app:testDebugUnitTest
 ```
+
+- Builds on JDK 17 or later; CI uses 21, as F-Droid does.
+- Every dependency is checked against `gradle/verification-metadata.xml`. After adding or upgrading one, regenerate it (from a cold cache, so BOMs and parent POMs are included):
+
+```bash
+./gradlew --write-verification-metadata sha256 --refresh-dependencies help :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:lintDebug
+```
+
+- The store listing (F-Droid) is in `fastlane/metadata/android/en-US`: descriptions, icon, screenshots and a changelog per `versionCode` in `changelogs/<versionCode>.txt`.
 
 The unit tests check:
 
