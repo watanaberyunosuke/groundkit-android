@@ -1,0 +1,1 @@
+First release: Now, Flights, Turnarounds and Shift tabs, airport and airspace maps, briefing, ramp weather alerts, Health Connect, offline data and optional account sync.
