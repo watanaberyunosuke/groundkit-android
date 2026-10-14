@@ -107,6 +107,8 @@ The contract, the Supabase setup and known gaps are in the aviation repo's [docs
 ./gradlew --write-verification-metadata sha256 --refresh-dependencies help :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:lintDebug
 ```
 
+  Gradle only records the `aapt2` jar for the OS it runs on. After an AGP upgrade, add the `-linux`, `-osx` and `-windows` jars by hand, hashed from `https://dl.google.com/android/maven2/com/android/tools/build/aapt2/<version>/`; CI and F-Droid build on Linux.
+
 - The store listing (F-Droid) is in `fastlane/metadata/android/en-US`: descriptions, icon, screenshots and a changelog per `versionCode` in `changelogs/<versionCode>.txt`.
 
 The unit tests check:
