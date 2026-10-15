@@ -39,8 +39,8 @@ jobs:
       - name: Unit tests
         run: ./gradlew :app:testDebugUnitTest
 
-      - name: Build APKs
-        run: ./gradlew :app:assembleDebug :app:assembleRelease
+      - name: Build APKs and app bundle
+        run: ./gradlew :app:assembleDebug :app:assembleRelease :app:bundleRelease
 
       # Signs the release APK only when the keystore secrets exist; otherwise it is
       # published unsigned (not installable) alongside the debug APK.
@@ -65,8 +65,16 @@ jobs:
             --key-pass env:KEY_PASSWORD \
             --out "$out/app-release.apk" \
             "$out/app-release-unsigned.apk"
-          rm "$out/app-release-unsigned.apk" "$RUNNER_TEMP/release.jks"
           "$apksigner" verify "$out/app-release.apk"
+          # Google Play takes the app bundle, signed with the same key (as the upload key).
+          jarsigner \
+            -keystore "$RUNNER_TEMP/release.jks" \
+            -storepass:env KEYSTORE_PASSWORD \
+            -keypass:env KEY_PASSWORD \
+            app/build/outputs/bundle/release/app-release.aab \
+            "$KEY_ALIAS"
+          jarsigner -verify app/build/outputs/bundle/release/app-release.aab
+          rm "$out/app-release-unsigned.apk" "$RUNNER_TEMP/release.jks"
 
       - uses: actions/upload-artifact@v5
         with:
@@ -74,6 +82,8 @@ jobs:
           path: |
             app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+            app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: error
 
       - name: Upload test reports
@@ -84,12 +94,15 @@ jobs:
           path: app/build/reports/tests/
 
   release:
-    # A v* tag publishes the APKs as a GitHub Release.
+    # A v* tag publishes the APKs as a GitHub Release and, when the Play secrets exist,
+    # the app bundle to Google Play.
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      PLAY_ENABLED: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' && secrets.ANDROID_KEYSTORE_BASE64 != '' }}
     steps:
       - uses: actions/download-artifact@v5
         with:
@@ -104,3 +117,18 @@ jobs:
             --title "$GITHUB_REF_NAME" \
             --generate-notes \
             $(find apk -name '*.apk')
+
+      # Track defaults to internal; set the PLAY_TRACK variable (internal, alpha, beta,
+      # production) to change it. Until the app's first release is reviewed, Play only
+      # accepts drafts: set PLAY_RELEASE_STATUS to "draft" for that.
+      - name: Upload to Google Play
+        if: env.PLAY_ENABLED == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.harrydatahub.groundkit
+          releaseFiles: apk/bundle/release/app-release.aab
+          mappingFile: apk/mapping/release/mapping.txt
+          track: ${{ vars.PLAY_TRACK || 'internal' }}
+          status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
+          releaseName: ${{ github.ref_name }}

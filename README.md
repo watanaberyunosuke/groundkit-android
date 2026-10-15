@@ -124,3 +124,24 @@ The unit tests check:
 - account sync: the settings merge, the mapping to the app's settings, PKCE, session and error parsing. `SupabaseIntegrationTest` also runs against a test Supabase project when `GK_SUPABASE_TEST_URL` and `GK_SUPABASE_TEST_KEY` are set (it creates and deletes a user, so turn off email confirmation there).
 
 To regenerate the fixtures, run the scripts with the aviation project's Python environment (it has `duckdb`).
+
+## Releases and signing
+
+A `v*` tag builds, signs and publishes the app (`.github/workflows/android.yml`):
+
+- **GitHub Release**: the signed release APK and the debug APK.
+- **Google Play**: the signed app bundle and R8 mapping file, to the `internal` track. The repository variables `PLAY_TRACK` (`internal`, `alpha`, `beta`, `production`) and `PLAY_RELEASE_STATUS` (`completed`, or `draft` until the first release is reviewed) override this. The step is skipped without the `PLAY_SERVICE_ACCOUNT_JSON` secret.
+
+One release key signs both, so a GitHub install and a Play install update each other. Play App Signing holds an encrypted copy of the same key (uploaded with Google's PEPK tool), and the same key is the upload key.
+
+| | |
+|---|---|
+| Alias | `groundkit` |
+| SHA-256 | `14:CF:FF:05:71:17:6E:8F:6F:C3:D4:45:0D:D7:F5:9A:60:F4:A5:39:92:6B:07:E7:C5:78:71:EB:A9:8A:70:9C` |
+| SHA-1 | `B6:EF:F6:93:FC:55:83:90:6A:EE:A1:16:2B:8C:E0:A5:92:6A:0E:B5` |
+| Secrets | `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` |
+
+- The keystore is not in the repository. Keep an offline backup with its password: losing it ends updates for GitHub installs.
+- Each release needs a higher `versionCode` in `app/build.gradle.kts`; Play rejects a repeated one.
+- F-Droid builds from source and signs with its own key unless reproducible builds are set up, so its installs do not update from GitHub or Play (or the reverse).
+- Play's automatic protection (installer check) is off, so the Play build is the code in this repository.
